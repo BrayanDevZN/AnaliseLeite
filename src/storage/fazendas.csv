@@ -1,0 +1,41 @@
+﻿fazenda_id;nome_fazenda;produtor;cidade;estado;preco_litro
+F001;Sitio Aurora I;Adalberto Ribeiro;Betim;MG;2,36
+F002;Fazenda Sao Jose I;Benedita Alves;Igarape;MG;2,18
+F003;Sitio Boa Vista I;Carlos Nogueira;Mateus Leme;MG;2,58
+F004;Fazenda Santa Rita I;Dirce Fonseca;Juatuba;MG;2,51
+F005;Sitio das Palmeiras I;Edmilson Prado;Para de Minas;MG;2,55
+F006;Fazenda Recanto I;Fatima Rezende;Itauna;MG;2,39
+F007;Sitio Bela Vista I;Geraldo Campos;Divinopolis;MG;2,67
+F008;Fazenda Tres Barras I;Helena Bastos;Bom Despacho;MG;2,36
+F009;Sitio Agua Limpa I;Ivan Siqueira;Pitangui;MG;2,63
+F010;Fazenda Monte Alegre I;Joana Peixoto;Rio Verde;GO;2,28
+F011;Sitio do Vale I;Kleber Andrade;Jatai;GO;2,22
+F012;Fazenda Santo Antonio I;Lucia Moreira;Catalao;GO;2,33
+F013;Sitio Primavera I;Marcos Tavares;Betim;MG;2,37
+F014;Fazenda Boa Esperanca I;Neusa Camargo;Igarape;MG;2,41
+F015;Sitio Sao Pedro I;Osvaldo Pinto;Mateus Leme;MG;2,18
+F016;Fazenda Cachoeira I;Pedro Vilela;Juatuba;MG;2,29
+F017;Sitio Alto da Serra I;Quiteria Bueno;Para de Minas;MG;2,56
+F018;Fazenda Nossa Senhora I;Rubens Salgado;Itauna;MG;2,36
+F019;Sitio Campo Verde I;Sonia Marques;Divinopolis;MG;2,52
+F020;Fazenda Rio Claro I;Tiago Ferraz;Bom Despacho;MG;2,53
+F021;Sitio Aurora II;Ubirajara Lima;Pitangui;MG;2,61
+F022;Fazenda Sao Jose II;Vanda Coutinho;Rio Verde;GO;2,61
+F023;Sitio Boa Vista II;Wilson Barreto;Jatai;GO;2,21
+F024;Fazenda Santa Rita II;Ximena Duarte;Catalao;GO;2,49
+F025;Sitio das Palmeiras II;Yara Pontes;Betim;MG;2,58
+F026;Fazenda Recanto II;Zilda Guimaraes;Igarape;MG;2,47
+F027;Sitio Bela Vista II;Anselmo Cruz;Mateus Leme;MG;2,65
+F028;Fazenda Tres Barras II;Bianca Toledo;Juatuba;MG;2,29
+F029;Sitio Agua Limpa II;Cesar Rocha;Para de Minas;MG;2,26
+F030;Fazenda Monte Alegre II;Denise Amaral;Itauna;MG;2,15
+F031;Sitio do Vale II;Elias Monteiro;Divinopolis;MG;2,58
+F032;Fazenda Santo Antonio II;Fernanda Braga;Bom Despacho;MG;2,06
+F033;Sitio Primavera II;Gilson Teixeira;Pitangui;MG;2,25
+F034;Fazenda Boa Esperanca II;Heloisa Vieira;Rio Verde;GO;2,33
+F035;Sitio Sao Pedro II;Ivo Sampaio;Jatai;GO;2,49
+F036;Fazenda Cachoeira II;Julia Cordeiro;Catalao;GO;2,53
+F037;Sitio Alto da Serra II;Lauro Freitas;Betim;MG;2,08
+F038;Fazenda Nossa Senhora II;Marta Bezerra;Igarape;MG;2,46
+F039;Sitio Campo Verde II;Nelson Aguiar;Mateus Leme;MG;2,18
+F040;Fazenda Rio Claro II;Olivia Passos;Juatuba;MG;2,49
