@@ -27,6 +27,7 @@ jobs:
                 python-version: "3.12"
 
             - run: pip install pandas
+            - run: pip install pyarrow
             - run: python -m tests.unit.extract
 
         
