@@ -1,15 +1,15 @@
 <div align="center">
   <h1>🥛 Análise Leite</h1>
-  <h3>Inteligência de dados para uma cadeia do leite mais segura</h3>
+  <h3>Milk Traceability &amp; Data Intelligence</h3>
   <p>
-    Rastreabilidade de ponta a ponta&nbsp;&nbsp;•&nbsp;&nbsp;Qualidade monitorada&nbsp;&nbsp;•&nbsp;&nbsp;Decisões orientadas por dados
+    <em>From farm collection to smarter, safer dairy decisions.</em>
   </p>
 
   <p>
-    <a href="https://github.com/BrayanDevZN/AnaliseLeite/actions/workflows/unit.yaml"><img src="https://img.shields.io/github/actions/workflow/status/BrayanDevZN/AnaliseLeite/unit.yaml?branch=develop&style=for-the-badge&logo=python&logoColor=white&label=Unitários" alt="Testes unitários"></a>
-    <a href="https://github.com/BrayanDevZN/AnaliseLeite/actions/workflows/integration.yaml"><img src="https://img.shields.io/github/actions/workflow/status/BrayanDevZN/AnaliseLeite/integration.yaml?branch=develop&style=for-the-badge&logo=githubactions&logoColor=white&label=Integra%C3%A7%C3%A3o" alt="Testes de integração"></a>
-    <a href="https://github.com/BrayanDevZN/AnaliseLeite/actions/workflows/functional.yaml"><img src="https://img.shields.io/github/actions/workflow/status/BrayanDevZN/AnaliseLeite/functional.yaml?branch=develop&style=for-the-badge&logo=githubactions&logoColor=white&label=Funcional" alt="Teste funcional"></a>
-    <img src="https://img.shields.io/badge/CI%2FCD-GitHub_Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" alt="CI/CD com GitHub Actions">
+    <a href="https://github.com/BrayanDevZN/AnaliseLeite/actions/workflows/unit.yaml"><img src="https://img.shields.io/github/actions/workflow/status/BrayanDevZN/AnaliseLeite/unit.yaml?branch=develop&style=for-the-badge&logo=githubactions&logoColor=white&label=Unit%20Tests" alt="Unit tests"></a>
+    <a href="https://github.com/BrayanDevZN/AnaliseLeite/actions/workflows/integration.yaml"><img src="https://img.shields.io/github/actions/workflow/status/BrayanDevZN/AnaliseLeite/integration.yaml?branch=develop&style=for-the-badge&logo=githubactions&logoColor=white&label=Integration%20Tests" alt="Integration tests"></a>
+    <a href="https://github.com/BrayanDevZN/AnaliseLeite/actions/workflows/functional.yaml"><img src="https://img.shields.io/github/actions/workflow/status/BrayanDevZN/AnaliseLeite/functional.yaml?branch=develop&style=for-the-badge&logo=githubactions&logoColor=white&label=Functional%20Tests" alt="Functional tests"></a>
+    <img src="https://img.shields.io/badge/CI%2FCD-GitHub_Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" alt="CI/CD with GitHub Actions">
   </p>
 
   <p>
@@ -60,7 +60,7 @@ Atualmente, a base contém:
 
 ## Arquitetura
 
-O desenho lógico do projeto segue o fluxo abaixo. As diferenças ainda existentes entre esse desenho e a implementação estão registradas em [Estado atual e limitações conhecidas](#estado-atual-e-limitações-conhecidas).
+O desenho lógico do projeto segue o fluxo abaixo:
 
 ```mermaid
 flowchart LR
@@ -300,19 +300,8 @@ Portas padrão:
 
 A aplicação registra eventos no terminal e no arquivo `src/logs/app.log`, incluindo leitura de camadas, transformações, conexão com o Redis e erros do pipeline.
 
-## Estado atual e limitações conhecidas
-
-- A rota consulta o Redis, mas ainda não grava automaticamente o resultado do pipeline no cache; o método de gravação já existe em `ControlCache` e usa TTL de 120 segundos.
-- O projeto versiona as camadas `cleaned` e `processed`, por isso a API consegue servir imediatamente o resultado pronto. A regeneração completa a partir apenas dos CSVs ainda precisa alinhar os caminhos de leitura e escrita do Parquet intermediário.
-- O endpoint usa HTTP `201` em uma operação de leitura. Em uma evolução da API, o código mais convencional seria `200`.
-- A conexão com o Redis é criada durante a importação da aplicação; portanto, o serviço precisa estar disponível antes da inicialização da API.
-- Os scripts `tests/unit/extract.py` e `tests/integration/transform.py` chamam métodos assíncronos sem aguardá-los; eles precisam ser ajustados para validar efetivamente essas etapas.
-- O CORS aceita qualquer origem para requisições `GET`. Essa configuração é prática para desenvolvimento, mas deve ser restringida em produção.
-- O projeto não possui autenticação e deve ser tratado como uma aplicação acadêmica/de demonstração.
-
 ## Próximos passos
 
-- completar o ciclo automático de preenchimento e reaproveitamento do cache;
 - tornar o pipeline regenerável somente a partir da camada `raw`;
 - adicionar filtros por fazenda, silo, período, motorista e resultado;
 - preservar `fazenda_id` e `silo` como campos explícitos na resposta;
