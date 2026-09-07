@@ -8,7 +8,7 @@ class TransformData:
     def __init__(self)-> None:
 
         #caminho onde o data frame ta salvo
-        self.BASE_DIR = Path(__file__).resolve().parent.parent / "storage/cleaned/fazendas_analise.parquet"
+        self.BASE_DIR = Path(__file__).resolve().parent.parent / "storage"
        
 
     #Confere se existe arquivo salvo, se existir, le, se não, executa o extract
@@ -16,13 +16,15 @@ class TransformData:
 
         try:
 
-            logger.info(f"Tentando ler {self.BASE_DIR}...")
+            path = self.BASE_DIR / "cleaned/fazendas_analise.parquet"
 
-            if os.path.exists(self.BASE_DIR):
+            logger.info(f"Tentando ler {path}...")
+
+            if os.path.exists(path):
 
                 
 
-                self.df = pd.read_parquet(path=self.BASE_DIR)
+                self.df = pd.read_parquet(path=path)
 
             else:
 
@@ -45,7 +47,13 @@ class TransformData:
     #Rankeia do menor pro maior  pelo cpp e ccs
     def _ranking(self) -> None:
 
-        self.df = self.df.sort_values(by=["ccs", "cpp", "media_resultado_exame"], ascending=True)
+        self.df = self.df.sort_values(by=["ccs", "cpp", "media_aprovacao"], ascending=True)
+
+    #Transforma resultado exame em 0 ou 1
+    def _result(self) -> None:
+
+        self.df["resultado_exame"] = (self.df["resultado_exame"] == "aprovado").astype(int)
+       
 
     #Agrupa pelas fazendas 
     def _group(self) -> None:
@@ -69,23 +77,38 @@ class TransformData:
                     "cpp": "mean",
                     "motorista": "first",
                     "caminhao": "first",
-                    "resultado_exame": "count"
+                    "resultado_exame": "mean"
 
 
 
                 }
             )
+
+            
         except Exception as e:
             logger.error(e)
             raise Exception(e)
 
-    #Faz a media de aprovação
-    def _mean_result(self) -> None:
 
-        logger.info("Calculando a media de resultados dos exames...")
+    #Renomeia a coluna resultado exame e arredonda
+    def _rename(self) -> None:
 
-        self.df["media_resultado_exame"] = self.df["resultado_exame"].mean()
-        self.df = self.df.drop(columns=["resultado_exame"])
+        self.df = self.df.rename(columns={"resultado_exame": "media_aprovacao"})
+        self.df["media_aprovacao"] = self.df["media_aprovacao"].round(2)
+
+    
+
+    #Cria o caminho se não existir
+    def _path(self) -> None:
+
+        self.path = self.BASE_DIR / "processed"
+        self.path.mkdir(exist_ok=True, parents=True)
+
+
+    #Salva o dataframe
+    def _save(self) -> None:
+
+        self.df.to_parquet(path=self.path / "fazenda_analise_resultado.parquet")
 
 
     #Executa os metodos e retorna o dataframe
@@ -93,9 +116,12 @@ class TransformData:
 
         self._read()
         self._filter_comunit()
+        self._result()
         self._group()
-        self._mean_result()
+        self._rename()
         self._ranking()
+        self._path()
+        self._save()
 
 
         return self.df

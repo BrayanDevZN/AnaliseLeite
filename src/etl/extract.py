@@ -44,10 +44,18 @@ class ExtractData:
             logger.error(e)
             raise Exception(e)
 
-    #Muda o tipo de da coluna data
-    def _date(self) -> None:
+    #Muda o tipo de da coluna 
+    def _type(self) -> None:
 
+        logger.info("Alterando tipos...")
         self.df["data"] = pd.to_datetime(self.df["data"])
+        self.df["temperatura"] = self.df["temperatura"].str.replace(",", ".")
+        self.df["temperatura"] = self.df["temperatura"].astype(float)
+        self.df["preco_litro"] = self.df["preco_litro"].str.replace(",", ".")
+        self.df["preco_litro"] = self.df["preco_litro"].astype(float)
+        self.df["ccs"] = self.df["ccs"].astype(int)
+        self.df["cpp"] = self.df["cpp"].astype(int)
+
 
 
     #Cria o caminho onde a nova tabela vai ser salva se ele não existir
@@ -78,7 +86,7 @@ class ExtractData:
 
         self._load()
         self._merge()
-        self._date()
+        self._type()
         self._path()
         self._save()
 
