@@ -11,4 +11,26 @@ on:
             - main
             - develop
 
+jobs:
+
+    api:
+
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-python@v5
+              with:
+                python-version: "3.14"
+
+            - run: docker compose -f src/controller/compose.yml up -d --build
+
+            - run: pip install requests
+            - run: python -m tests.functional.api
+
+
+
+
+
             
