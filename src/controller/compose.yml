@@ -8,7 +8,12 @@ services:
       build:
         context: ../..
         dockerfile: src/controller/Dockerfile
+      
+      ports:
+        - "8000:8000"
 
       depends_on:
         - redis
+      environment:
+        - redis_host=redis
     
