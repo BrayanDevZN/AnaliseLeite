@@ -12,7 +12,7 @@ class RedisConenction:
     def __init__(self)-> None:
 
         self.port = 6379
-        self.host = "localhost"
+        self.host = "redis"
 
 
     #Cria a conexão
