@@ -42,7 +42,7 @@ jobs:
               with:
                 python-version: "3.14"
 
-            - run: docker compose -f src/controller/compose.yml -d 
+            - run: docker compose -f src/controller/compose.yml up -d 
             - run: python -m tests.unit.connetion
 
 
