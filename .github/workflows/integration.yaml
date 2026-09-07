@@ -59,6 +59,7 @@ jobs:
                 python-version: "3.14"
 
             - run: docker compose -f src/controller/compose.yml up -d
+            - run: pip install redis
             - run: python -m tests.integration.cache
             
 
