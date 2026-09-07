@@ -22,7 +22,7 @@
 </div>
 
 <p align="center">
-  <img src="assets/analise-leite-hero.png" alt="Fluxo de rastreabilidade do leite, da fazenda ao laticínio" width="100%">
+  <img src="assets/analise-leite-flow.gif" alt="Animated milk traceability flow from farm to dairy plant" width="100%">
 </p>
 
 ## Sobre o projeto
