@@ -7,37 +7,25 @@ class TransformData:
 
     def __init__(self)-> None:
 
-        #caminho onde o data frame ta salvo
         self.BASE_DIR = Path(__file__).resolve().parent.parent / "storage"
-       
+        
+        
 
-    #Confere se existe arquivo salvo, se existir, le, se não, executa o extract
+
+
+    #Le o dataframe
     def _read(self) -> None:
 
         try:
 
-            path = self.BASE_DIR / "cleaned/fazendas_analise.parquet"
-
-            logger.info(f"Tentando ler {path}...")
-
-            if os.path.exists(path):
-
-                
-
-                self.df = pd.read_parquet(path=path)
-
-            else:
-
-                logger.info("Arquivo não existe, executando pipeline...")
-
-                self.df = ExtractData().run()
+            logger.info("Lendo na camada cleaned...")
+            self.df = pd.read_parquet(path=self.BASE_DIR / "fazendas_analise.parquet")
 
         except Exception as e:
-
             logger.error(e)
             raise Exception(e)
-        
 
+       
     #Filtra o dataframe e pega somente os tanques que são comunitarios
     def _filter_comunit(self) -> None:
 
@@ -101,18 +89,25 @@ class TransformData:
     #Cria o caminho se não existir
     def _path(self) -> None:
 
-        self.path = self.BASE_DIR / "processed"
         self.path.mkdir(exist_ok=True, parents=True)
 
 
     #Salva o dataframe
     def _save(self) -> None:
 
-        self.df.to_parquet(path=self.path / "fazenda_analise_resultado.parquet")
+        try:
+
+            logger.info("Salvando na camada processed...")
+
+            self.df.to_parquet(path=self.BASE_DIR /  "processed" / "fazenda_analise_resultado.parquet")
+
+        except Exception as e:
+                    logger.error(e)
+                    raise Exception(e)
 
 
     #Executa os metodos e retorna o dataframe
-    def run(self) -> pd.DataFrame:
+    async def run(self) -> pd.DataFrame:
 
         self._read()
         self._filter_comunit()

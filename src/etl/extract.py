@@ -7,6 +7,8 @@ class ExtractData:
 
         #caminho base
         self.BASE_DIR = Path(__file__).resolve().parent.parent / "storage"
+        
+        
 
 
 
@@ -16,7 +18,7 @@ class ExtractData:
         try:
 
             logger.info("Lendo as duas tabelas na camada raw...")
-            print(self.BASE_DIR)
+            
 
             self.df_fazendas = pd.read_csv(self.BASE_DIR / "raw/fazendas.csv", sep=";")
             self.df_coletas = pd.read_csv(self.BASE_DIR / "raw/coletas.csv", sep=";")
@@ -74,7 +76,7 @@ class ExtractData:
         
             
 
-            self.df.to_parquet(path=self.path / "fazendas_analise.parquet")
+            self.df.to_parquet(path=self.BASE_DIR / "fazendas_analise.parquet")
 
         except Exception as e:
 
@@ -82,7 +84,7 @@ class ExtractData:
             raise Exception(e)
 
     #Executa os metodos e retorna o novo dataframe
-    def run(self) -> pd.DataFrame:
+    async def run(self) -> pd.DataFrame:
 
         self._load()
         self._merge()
