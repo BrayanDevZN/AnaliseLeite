@@ -1,4 +1,4 @@
-name: transform
+name: integration
 
 on:
     push:
@@ -28,3 +28,20 @@ jobs:
             - run: pip install pandas
             - run: pip install pyarrow
             - run: python -m tests.integration.transform
+
+    load:
+
+        runs-on: ubuntu-latest
+
+        steps:
+
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-python@v6
+              with:
+                python-version: "3.14"
+
+            - run: pip install pandas
+            - run: pip install pyarrow
+            - run: python -m tests.integration.load
+
