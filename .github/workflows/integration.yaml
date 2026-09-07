@@ -1,0 +1,74 @@
+name: integration
+
+on:
+    push:
+        branches:
+            - main
+            - develop
+    pull_request:
+        branches:
+
+            - main
+            - develop
+
+jobs:
+
+    transform:
+
+        runs-on: ubuntu-latest
+
+        steps:
+
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-python@v5
+              with:
+                python-version: "3.14"
+
+            - run: pip install pandas
+            - run: pip install pyarrow
+            - run: python -m tests.integration.transform
+
+    load:
+
+        runs-on: ubuntu-latest
+
+        steps:
+
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-python@v6
+              with:
+                python-version: "3.14"
+
+            - run: pip install pandas
+            - run: pip install pyarrow
+            - run: python -m tests.integration.load
+
+    cache:
+
+        runs-on: ubuntu-latest
+
+        env:
+            redis_host: localhost
+        services:
+            redis:
+                image: redis:alpine
+                ports:
+                    - 6379:6379
+
+        steps:
+
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-python@v5
+              with:
+
+                python-version: "3.14"
+
+            
+            - run: pip install redis
+            - run: python -m tests.integration.cache
+            
+
+

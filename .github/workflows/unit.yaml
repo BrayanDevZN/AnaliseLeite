@@ -1,0 +1,62 @@
+name: unit
+
+on:
+    push:
+        branches:
+            - main
+            - develop
+        
+    pull_request:
+        branches:
+            - main
+            - develop
+
+
+jobs:
+
+
+
+    
+    extract:
+        runs-on: ubuntu-latest
+
+        steps:
+
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-python@v5
+              with:
+                python-version: "3.12"
+
+            - run: pip install pandas
+            - run: pip install pyarrow
+            - run: python -m tests.unit.extract
+
+    connection:
+
+        runs-on: ubuntu-latest
+        env:
+            redis_host: localhost
+        services:
+            redis:
+                image: redis:alpine
+                ports:
+                    - 6379:6379
+
+        steps:
+
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-python@v5
+              with:
+                python-version: "3.14"
+
+            
+            - run: pip install redis
+            - run: python -m tests.unit.connection
+
+
+            
+
+        
+        
