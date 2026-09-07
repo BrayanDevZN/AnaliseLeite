@@ -6,13 +6,16 @@ Cria conexão com redis e testa
 """
 
 from redis import Redis
-
+import os
 class RedisConenction:
 
     def __init__(self)-> None:
 
         self.port = 6379
-        self.host = "redis"
+
+        redis_host = os.getenv("redis_host")
+
+        self.host = "redis" if redis_host is None else redis_host
 
 
     #Cria a conexão

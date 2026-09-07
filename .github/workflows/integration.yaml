@@ -48,6 +48,9 @@ jobs:
     cache:
 
         runs-on: ubuntu-latest
+
+        env:
+            redis_host: localhost
         services:
             redis:
                 image: redis:alpine
