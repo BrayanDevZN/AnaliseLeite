@@ -19,6 +19,8 @@ async def get():
 
             data = await instance.run()
 
+            client.save(data=data)
+
         return JSONResponse(
             status_code=201,
             content=data
