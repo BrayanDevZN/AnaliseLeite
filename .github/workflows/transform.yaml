@@ -26,4 +26,5 @@ jobs:
                 python-version: "3.14"
 
             - run: pip install pandas
+            - run: pip install pyarrow
             - run: python -m tests.integration.transform
