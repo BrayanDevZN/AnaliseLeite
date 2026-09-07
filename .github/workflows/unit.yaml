@@ -14,6 +14,8 @@ on:
 
 jobs:
 
+
+
     
     extract:
         runs-on: ubuntu-latest
@@ -32,7 +34,12 @@ jobs:
 
     connection:
 
-        runs-on: ubunt-latest
+        runs-on: ubuntu-latest
+        services:
+            redis:
+                image: redis:alpine
+                ports:
+                    - 6379:6379
 
         steps:
 
