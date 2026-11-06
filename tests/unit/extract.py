@@ -1,4 +1,4 @@
-
+import asyncio
 try:
 
     from src.etl.extract import ExtractData
@@ -6,7 +6,7 @@ try:
 
     instance = ExtractData()
 
-    df = instance.run()
+    df = asyncio.run(instance.run())
 
     print(df)
 

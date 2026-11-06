@@ -19,7 +19,7 @@ class TransformData:
         try:
 
             logger.info("Lendo na camada cleaned...")
-            self.df = pd.read_parquet(path=self.BASE_DIR / "fazendas_analise.parquet")
+            self.df = pd.read_parquet(path=self.BASE_DIR / "cleaned/fazendas_analise.parquet")
 
         except Exception as e:
             logger.error(e)
@@ -89,7 +89,7 @@ class TransformData:
     #Cria o caminho se não existir
     def _path(self) -> None:
 
-        self.path.mkdir(exist_ok=True, parents=True)
+        self.BASE_DIR.mkdir(exist_ok=True, parents=True)
 
 
     #Salva o dataframe

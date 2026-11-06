@@ -8,10 +8,6 @@ class ExtractData:
         #caminho base
         self.BASE_DIR = Path(__file__).resolve().parent.parent / "storage"
         
-        
-
-
-
     #carrega as duas tabelas
     def _load(self) -> None:
 
@@ -63,7 +59,7 @@ class ExtractData:
     #Cria o caminho onde a nova tabela vai ser salva se ele não existir
     def _path(self) -> None:
 
-        self.path = self.BASE_DIR / "cleaned/"
+        self.path = self.BASE_DIR / "cleaned"
 
         self.path.mkdir(exist_ok=True, parents=True)
 
@@ -76,7 +72,7 @@ class ExtractData:
         
             
 
-            self.df.to_parquet(path=self.BASE_DIR / "fazendas_analise.parquet")
+            self.df.to_parquet(path=self.path / "fazendas_analise.parquet")
 
         except Exception as e:
 

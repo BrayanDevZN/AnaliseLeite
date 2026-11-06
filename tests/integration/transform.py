@@ -1,10 +1,10 @@
 from src.etl.transform import TransformData
-
+import asyncio
 
 try:
 
     instance = TransformData()
-    df = instance.run()
+    df = asyncio.run(instance.run())
     print(df)
 
 
