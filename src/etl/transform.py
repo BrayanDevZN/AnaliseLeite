@@ -26,11 +26,7 @@ class TransformData:
             raise Exception(e)
 
        
-    #Filtra o dataframe e pega somente os tanques que são comunitarios
-    def _filter_comunit(self) -> None:
-
-        self.df = self.df[self.df["tipo_tanque"] == "comunitario"]
-
+   
 
     #Rankeia do menor pro maior  pelo cpp e ccs
     def _ranking(self) -> None:
@@ -58,6 +54,7 @@ class TransformData:
                     "estado": "first",
                     "preco_litro": "sum",
                     "tanque": "first",
+
                     "tipo_tanque": "first",
                     "volume_litros": "mean",
                     "temperatura": "mean",

@@ -30,5 +30,5 @@ async def get():
 
         raise HTTPException(
             status_code=501,
-            detail=e
+            detail=str(e)
         )
