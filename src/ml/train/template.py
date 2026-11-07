@@ -1,12 +1,14 @@
 from sklearn.ensemble import RandomForestClassifier
 from src.etl.interface import LoadData
 from pathlib import Path
+from src.logs.log import logger
 import joblib
+import pandas as pd
+class TrainModel:
 
-class TrainDf:
-
-    def __init__(self)->None:
-        self.BASE_DIR = Path(__file__).resolve().parent 
+    def __init__(self, model_name:str)->None:
+        self.BASE_DIR = Path(__file__).resolve().parent.parent
+        self.name = model_name
         
 
     async def _load(self) -> None:
@@ -14,8 +16,12 @@ class TrainDf:
         self.df =   LoadData(layer="cleaned").load()
 
     async def _data(self) -> None:
+
+        logger.info("getting collumns...")
         
-        self.x = self.df[["data", "temperatura", "ccs", "cpp"]]
+        self.x = self.df[["estado", "cidade", "tanque", "data", "temperatura", "ccs", "cpp"]]
+        
+        self.x = pd.get_dummies(columns=["estado", "cidade", "tanque"], dtype=int, data=self.x)
 
         self.x["year"] = self.x["data"].dt.year
         self.x["month"] = self.x["data"].dt.month
@@ -28,10 +34,14 @@ class TrainDf:
 
     async def _train(self) -> None:
 
+        logger.info(f"Training model {self.name}...")
+
+        
+
         self.model = RandomForestClassifier(
             n_estimators=200,
             max_features="sqrt",
-            class_weight="balanced",
+           
             random_state=42,
             min_samples_leaf=5
 
@@ -39,13 +49,19 @@ class TrainDf:
 
         self.model.fit(X=self.x, y=self.y)
 
+        logger.success(f"model {self.name} trained with success")
+
     async def _save_model(self) -> None:
+
+        logger.info(f"Saving model {self.name}...")
 
         path = self.BASE_DIR / "models"
 
         path.mkdir(exist_ok=True)
 
-        joblib.dump(self.model, path / "joblib")
+        joblib.dump(self.model, path / f"{self.name}.joblib")
+
+        logger.success("Saved with success")
 
     async def run(self) -> None:
 
@@ -54,11 +70,6 @@ class TrainDf:
         await self._train()
         await self._save_model()
 
-
-if __name__ == "__main__":
-    import asyncio
-    instance = TrainDf()
-    asyncio.run(instance.run())
 
 
 

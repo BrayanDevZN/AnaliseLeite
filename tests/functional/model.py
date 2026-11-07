@@ -6,7 +6,7 @@ import pandas as pd
 
 def test_model() -> None:
 
-    model = ModelInference()
+    model = ModelInference(model="anl_v2")
 
     BASE_DIR = Path(__file__).parent.parent.parent / "src/storage/test/analise_leite_teste.parquet"
 
@@ -27,12 +27,6 @@ def test_model() -> None:
     percent_error = error / total 
     print(f"percentual de acertos: {round(percent_acert * 100, 1)}% \npercentual de erros: {round(percent_error * 100, 1)}%")
     print(f"o modelo é {"valido" if percent_acert >= mean_result else "invalido"}")
-
-
-    
-
-    
-
 
 
 if __name__ == "__main__":
