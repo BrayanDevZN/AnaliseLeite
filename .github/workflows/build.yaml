@@ -16,10 +16,6 @@ jobs:
     build:
 
         runs-on: ubuntu-latest
-        env:
-          redis_host: localhost
-          
-            
 
         steps:
 
@@ -38,12 +34,10 @@ jobs:
 
             - name: execute unit
               run: |
-                python -m tests.unit.connection
                 python -m tests.unit.raw
 
             - name: execute integration 
               run: |
-               python -m tests.integration.cache
                python -m tests.integration.silver
                python -m tests.integration.gold
 

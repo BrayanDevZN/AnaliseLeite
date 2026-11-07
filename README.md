@@ -17,7 +17,6 @@
     <img src="https://img.shields.io/badge/FastAPI-0.143-009688?style=for-the-badge&logo=fastapi&logoColor=cian" alt="FastAPI 0.143">
     <img src="https://img.shields.io/badge/Pandas-3.0-150458?style=for-the-badge&logo=pandas&logoColor=green" alt="Pandas 3.0">
     <img src="https://img.shields.io/badge/scikit--learn-1.9-F7931E?style=for-the-badge&logo=scikitlearn&logoColor=white" alt="scikit-learn 1.9">
-    <img src="https://img.shields.io/badge/Redis-8-DC382D?style=for-the-badge&logo=redis&logoColor=red" alt="Redis 8">
     <img src="https://img.shields.io/badge/Docker-ready-2496ED?style=for-the-badge&logo=docker&logoColor=blue" alt="Docker ready">
   </p>
 </div>
@@ -51,8 +50,7 @@ O pipeline ajuda a responder perguntas como:
 | **Pandas** | Lê, relaciona, limpa, agrupa e ordena os dados |
 | **Parquet / PyArrow** | Armazena as camadas tratada e processada de forma eficiente |
 | **scikit-learn / joblib** | Treina um `RandomForestClassifier` e persiste o modelo |
-| **Redis** | Disponibiliza uma camada de cache com expiração de 120 segundos |
-| **Docker Compose** | Sobe a API e o Redis em serviços integrados |
+| **Docker Compose** | Sobe a API em container |
 | **GitHub Actions** | Executa verificações unitárias, de integração e funcionais |
 
 Atualmente, a base contém:
@@ -68,9 +66,7 @@ O ETL segue a arquitetura em camadas (medalhão): **bronze** (`raw`), **silver**
 ```mermaid
 flowchart LR
     U[Cliente HTTP] -->|GET /pipeline/?layer=...| API[FastAPI]
-    API --> CACHE{Redis possui dados?}
-    CACHE -->|Sim| RESP[Resposta JSON]
-    CACHE -->|Não| LOAD[LoadData]
+    API --> LOAD[LoadData]
 
     LOAD -->|raw| BRONZE[Bronze.get_raw]
     LOAD -->|cleaned| SILVER[Silver.get_silver]
@@ -93,11 +89,10 @@ flowchart LR
 ### Fluxo de uma requisição
 
 1. O cliente chama `GET /pipeline/`, opcionalmente com `?layer=raw|cleaned|processed` (padrão: `processed`).
-2. A API consulta a chave `cache` no Redis.
-3. Em caso de cache vazio, `LoadData(layer)` executa o método da camada pedida.
-4. Cada camada reaproveita o arquivo já salvo quando ele existe e, se não existir, gera a partir da camada anterior.
-5. O resultado é convertido em JSON: uma lista de registros, ou um objeto com as tabelas `fazendas` e `coletas` na camada `raw`.
-6. A API responde com HTTP `201`.
+2. `LoadData(layer)` executa o método da camada pedida.
+3. Cada camada reaproveita o arquivo já salvo quando ele existe e, se não existir, gera a partir da camada anterior.
+4. O resultado é convertido em JSON: uma lista de registros, ou um objeto com as tabelas `fazendas` e `coletas` na camada `raw`.
+5. A API responde com HTTP `201`.
 
 ## Pipeline ETL
 
@@ -185,7 +180,6 @@ AnaliseLeite/
 ├── documents/                 # enunciado e contexto do problema
 ├── src/
 │   ├── application/           # aplicação FastAPI e rotas
-│   ├── cache/                 # conexão e operações no Redis
 │   ├── controller/            # Dockerfile, Compose e dependências
 │   ├── etl/                   # camadas bronze, silver, gold e interface de carga
 │   ├── logs/                  # configuração centralizada de logs
@@ -193,7 +187,7 @@ AnaliseLeite/
 │   └── storage/               # camadas raw, cleaned e processed
 ├── tests/
 │   ├── unit/                  # verificações isoladas
-│   ├── integration/           # integração entre camadas do ETL e cache
+│   ├── integration/           # integração entre as camadas do ETL
 │   └── functional/            # chamada HTTP à API em execução
 └── .github/workflows/         # integração contínua
 ```
@@ -214,7 +208,7 @@ git clone https://github.com/BrayanDevZN/AnaliseLeite.git
 cd AnaliseLeite
 ```
 
-Suba a API e o Redis:
+Suba a API:
 
 ```bash
 docker compose -f src/controller/compose.yml up --build
@@ -234,7 +228,7 @@ docker compose -f src/controller/compose.yml down
 
 ### Execução local
 
-Use Python 3.14 e mantenha uma instância do Redis disponível em `localhost:6379`.
+Use Python 3.14.
 
 ```bash
 python -m venv .venv
@@ -243,16 +237,10 @@ python -m pip install --upgrade pip
 pip install -r src/controller/requirements.txt
 ```
 
-Em outro terminal, uma forma simples de iniciar apenas o Redis é:
-
-```bash
-docker run --rm -p 6379:6379 redis:alpine
-```
-
 Depois, na raiz do projeto, inicie a API:
 
 ```bash
-redis_host=localhost python -m uvicorn src.application.main:app --host 0.0.0.0 --port 8000 --reload
+python -m uvicorn src.application.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ## Uso da API
@@ -302,40 +290,33 @@ Os testes deste projeto são scripts executáveis como módulos Python.
 ```bash
 # Unitários
 python -m tests.unit.raw
-python -m tests.unit.connection
 
 # Integração
 python -m tests.integration.silver
 python -m tests.integration.gold
-python -m tests.integration.cache
 
 # Funcional — requer a API em execução e o pacote requests
 pip install requests
 python -m tests.functional.api
 ```
 
-Os testes de conexão e cache exigem Redis em execução. O teste funcional exige os dois serviços do Compose. No GitHub Actions, os fluxos ficam separados em:
+O teste funcional exige a API do Compose em execução. No GitHub Actions, os fluxos ficam separados em:
 
-- `unit.yaml` — leitura da camada raw e conexão com Redis;
-- `integration.yaml` — camadas silver e gold e cache;
+- `unit.yaml` — leitura da camada raw;
+- `integration.yaml` — camadas silver e gold;
 - `functional.yaml` — ambiente completo com Docker Compose e chamada à API.
 
 ## Configuração
 
-| Variável | Padrão | Descrição |
-|---|---|---|
-| `redis_host` | `redis` | Host usado pela conexão com o Redis; em execução local, use `localhost` |
-
-Portas padrão:
+Porta padrão:
 
 | Serviço | Porta |
 |---|---:|
 | API FastAPI | `8000` |
-| Redis | `6379` |
 
 ## Logs
 
-A aplicação registra eventos no terminal e no arquivo `src/logs/app.log`, incluindo leitura de camadas, transformações, conexão com o Redis e erros do pipeline.
+A aplicação registra eventos no terminal e no arquivo `src/logs/app.log`, incluindo leitura de camadas, transformações e erros do pipeline.
 
 ## Próximos passos
 

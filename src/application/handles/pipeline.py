@@ -1,9 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from src.etl.interface import LoadData
-from src.cache.manage import client
 from typing import Literal
-import json
 router_pipeline = APIRouter(prefix="/pipeline", tags=["pipeline"])
 
 
@@ -12,28 +10,17 @@ async def get(layer:Literal["processed", "cleaned", "raw"]="processed"):
 
     try:
 
-        data = await client.read()
+        instance = LoadData(layer=layer)
 
-        if not data:
+        data = instance.load()
 
+        if isinstance(data, dict):
+            for key, value in data.items():
 
-            instance = LoadData(layer=layer)
-
-            data =  instance.load()
-
-            if isinstance(data, dict):
-                for key, value in data.items():
-
-                    data[key] = value.to_dict(orient="records")
-
-            else:
-                data = data.to_dict(orient="records")
-
-            await client.save(data=json.dumps(data))
+                data[key] = value.to_dict(orient="records")
 
         else:
-
-            data = json.loads(data)
+            data = data.to_dict(orient="records")
 
         return JSONResponse(
             status_code=201,
