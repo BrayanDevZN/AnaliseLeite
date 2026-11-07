@@ -14,8 +14,9 @@
 
   <p>
     <img src="https://img.shields.io/badge/Python-3.14-3776AB?style=for-the-badge&logo=python&logoColor=yellow" alt="Python 3.14">
-    <img src="https://img.shields.io/badge/FastAPI-0.141-009688?style=for-the-badge&logo=fastapi&logoColor=cian" alt="FastAPI 0.141">
+    <img src="https://img.shields.io/badge/FastAPI-0.143-009688?style=for-the-badge&logo=fastapi&logoColor=cian" alt="FastAPI 0.143">
     <img src="https://img.shields.io/badge/Pandas-3.0-150458?style=for-the-badge&logo=pandas&logoColor=green" alt="Pandas 3.0">
+    <img src="https://img.shields.io/badge/scikit--learn-1.9-F7931E?style=for-the-badge&logo=scikitlearn&logoColor=white" alt="scikit-learn 1.9">
     <img src="https://img.shields.io/badge/Redis-8-DC382D?style=for-the-badge&logo=redis&logoColor=red" alt="Redis 8">
     <img src="https://img.shields.io/badge/Docker-ready-2496ED?style=for-the-badge&logo=docker&logoColor=blue" alt="Docker ready">
   </p>
@@ -27,7 +28,7 @@
 
 ## Sobre o projeto
 
-O **Análise Leite** é um projeto de engenharia de dados voltado ao rastreamento da cadeia de coleta de uma cooperativa leiteira. Ele relaciona fazendas e coletas, trata os dados operacionais, calcula indicadores de qualidade e disponibiliza o resultado por uma API REST.
+O **Análise Leite** é um projeto de engenharia de dados voltado ao rastreamento da cadeia de coleta de uma cooperativa leiteira. Ele relaciona fazendas e coletas, trata os dados operacionais, calcula indicadores de qualidade, disponibiliza o resultado por uma API REST e prepara a base para um modelo de machine learning que prevê a aprovação dos exames.
 
 O cenário parte de um problema real do setor: quando leite com resíduos ou fora dos padrões entra em um tanque comunitário, segue em um caminhão e chega a um silo, vários lotes podem ser afetados. Sem dados relacionados, é difícil reconstruir a origem do problema e distribuir responsabilidades de forma justa.
 
@@ -37,7 +38,8 @@ O pipeline ajuda a responder perguntas como:
 - qual é a média de aprovação dos exames;
 - quais volumes, temperaturas, níveis de CCS e CPP foram registrados;
 - quais tanques, motoristas e caminhões participaram da coleta;
-- como os dados de cadastro das fazendas se relacionam aos eventos de coleta.
+- como os dados de cadastro das fazendas se relacionam aos eventos de coleta;
+- quais características de uma coleta (temperatura, CCS, CPP, tanque, silo) estão associadas à reprovação do exame.
 
 > Os dados presentes no repositório são fictícios e foram preparados para fins acadêmicos.
 
@@ -48,6 +50,7 @@ O pipeline ajuda a responder perguntas como:
 | **FastAPI** | Expõe o resultado do pipeline no endpoint `GET /pipeline/` |
 | **Pandas** | Lê, relaciona, limpa, agrupa e ordena os dados |
 | **Parquet / PyArrow** | Armazena as camadas tratada e processada de forma eficiente |
+| **scikit-learn / joblib** | Treina um `RandomForestClassifier` e persiste o modelo |
 | **Redis** | Disponibiliza uma camada de cache com expiração de 120 segundos |
 | **Docker Compose** | Sobe a API e o Redis em serviços integrados |
 | **GitHub Actions** | Executa verificações unitárias, de integração e funcionais |
@@ -56,62 +59,66 @@ Atualmente, a base contém:
 
 - **40 fazendas** cadastradas;
 - **1.092 coletas** na camada bruta;
-- **72 registros agregados** por fazenda e silo na camada processada.
+- **120 registros agregados** por fazenda e silo na camada processada.
 
 ## Arquitetura
 
-O desenho lógico do projeto segue o fluxo abaixo:
+O ETL segue a arquitetura em camadas (medalhão): **bronze** (`raw`), **silver** (`cleaned`) e **gold** (`processed`). Cada classe herda da anterior, e `LoadData` escolhe qual camada entregar.
 
 ```mermaid
 flowchart LR
-    U[Cliente HTTP] -->|GET /pipeline/| API[FastAPI]
+    U[Cliente HTTP] -->|GET /pipeline/?layer=...| API[FastAPI]
     API --> CACHE{Redis possui dados?}
     CACHE -->|Sim| RESP[Resposta JSON]
     CACHE -->|Não| LOAD[LoadData]
 
-    LOAD --> LAYER{Camada mais avançada disponível}
-    LAYER -->|processed| READ[Lê resultado Parquet]
-    LAYER -->|cleaned| TRANSFORM[Transforma e agrega]
-    LAYER -->|raw| EXTRACT[Extrai, relaciona e tipa]
+    LOAD -->|raw| BRONZE[Bronze.get_raw]
+    LOAD -->|cleaned| SILVER[Silver.get_silver]
+    LOAD -->|processed| GOLD[Gold.get_gold]
 
-    RAW[(CSV raw)] --> EXTRACT
-    EXTRACT --> CLEAN[(Parquet cleaned)]
-    CLEAN --> TRANSFORM
-    TRANSFORM --> PROCESSED[(Parquet processed)]
-    PROCESSED --> READ
+    RAW[(CSV raw)] --> BRONZE
+    BRONZE --> SILVER
+    SILVER --> CLEAN[(Parquet cleaned)]
+    CLEAN --> GOLD
+    GOLD --> PROCESSED[(Parquet processed)]
 
-    READ --> RESP
-    TRANSFORM --> RESP
-    EXTRACT --> RESP
+    BRONZE --> RESP
+    SILVER --> RESP
+    GOLD --> RESP
+
+    CLEAN -.-> TRAIN[TrainDf]
+    TRAIN -.-> MODEL[(predict.joblib)]
 ```
 
 ### Fluxo de uma requisição
 
-1. O cliente chama `GET /pipeline/`.
+1. O cliente chama `GET /pipeline/`, opcionalmente com `?layer=raw|cleaned|processed` (padrão: `processed`).
 2. A API consulta a chave `cache` no Redis.
-3. Em caso de cache vazio, `LoadData` procura dados na ordem `processed` → `cleaned` → `raw`.
-4. A camada mais avançada disponível define a operação executada.
-5. O DataFrame resultante é convertido para uma lista de objetos JSON.
+3. Em caso de cache vazio, `LoadData(layer)` executa o método da camada pedida.
+4. Cada camada reaproveita o arquivo já salvo quando ele existe e, se não existir, gera a partir da camada anterior.
+5. O resultado é convertido em JSON: uma lista de registros, ou um objeto com as tabelas `fazendas` e `coletas` na camada `raw`.
 6. A API responde com HTTP `201`.
 
 ## Pipeline ETL
 
-### 1. Extract — extração e limpeza
+### 1. Bronze — camada `raw`
 
-O módulo `src/etl/extract.py`:
+O módulo `src/etl/bronze.py` (`Bronze.get_raw`) lê `fazendas.csv` e `coletas.csv`, ambos separados por `;`, e devolve as duas tabelas **sem alterações**, em um dicionário `{"fazendas": df, "coletas": df}`.
 
-- lê `fazendas.csv` e `coletas.csv`, ambos separados por `;`;
+### 2. Silver — camada `cleaned`
+
+O módulo `src/etl/silver.py` (`Silver.get_silver`):
+
 - relaciona as tabelas por `fazenda_id` usando um *inner join*;
 - converte `data` para data/hora;
 - troca vírgula por ponto nos campos decimais;
 - converte preço, temperatura, CCS e CPP para tipos numéricos;
-- persiste o resultado intermediário em Parquet.
+- persiste o resultado em Parquet.
 
-### 2. Transform — regras de negócio
+### 3. Gold — camada `processed`
 
-O módulo `src/etl/transform.py`:
+O módulo `src/etl/gold.py` (`Gold.get_gold`):
 
-- mantém somente coletas de tanques comunitários;
 - converte `resultado_exame` em `1` para aprovado e `0` para não aprovado;
 - agrupa os dados por fazenda e silo;
 - calcula médias de volume, temperatura, CCS, CPP e aprovação;
@@ -119,11 +126,33 @@ O módulo `src/etl/transform.py`:
 - preserva dados descritivos, como fazenda, produtor, tanque, motorista e caminhão;
 - renomeia o indicador calculado para `media_aprovacao`;
 - ordena os registros por CCS, CPP e média de aprovação;
-- grava o resultado final na camada `processed`.
+- grava o resultado final em Parquet.
 
-### 3. Load — seleção e entrega
+### 4. Interface — `LoadData`
 
-O módulo `src/etl/load.py` procura a camada mais avançada que contenha arquivos. Se o resultado processado já existe, ele é lido diretamente; caso contrário, o módulo aciona a etapa necessária e retorna os registros como dicionários prontos para serialização.
+O módulo `src/etl/interface.py` mapeia `raw`, `cleaned` e `processed` para `get_raw`, `get_silver` e `get_gold`. O formato devolvido depende **apenas da camada pedida**, e não do que já existe em disco. A leitura e a escrita dos arquivos ficam em `src/etl/file.py` (`DfFile`).
+
+## Machine learning
+
+O módulo `src/ml/train.py` (`TrainDf`) treina um classificador para prever se o exame de uma coleta é aprovado, a partir das informações registradas na coleta.
+
+| Item | Detalhe |
+|---|---|
+| **Algoritmo** | `RandomForestClassifier` (scikit-learn) |
+| **Fonte dos dados** | Camada `cleaned`, com uma linha por coleta |
+| **Alvo** | `resultado_exame` (aprovado / reprovado) |
+| **Features** | `data`, `tanque`, `temperatura`, `ccs`, `cpp`, `silo` |
+| **Saída** | Modelo serializado com `joblib` em `src/ml/models/predict.joblib` |
+
+Parâmetros: 200 árvores, `max_features="sqrt"`, `min_samples_leaf=5`, `class_weight="balanced"` (compensa o desbalanceamento entre aprovados e reprovados) e `random_state=42`.
+
+Para treinar, na raiz do projeto:
+
+```bash
+python -m src.ml.train
+```
+
+> **Status:** o módulo de treino está em desenvolvimento. Ainda faltam a codificação das variáveis categóricas, a separação em treino e teste com métricas, e a integração com a API.
 
 ## Camadas de dados
 
@@ -158,12 +187,13 @@ AnaliseLeite/
 │   ├── application/           # aplicação FastAPI e rotas
 │   ├── cache/                 # conexão e operações no Redis
 │   ├── controller/            # Dockerfile, Compose e dependências
-│   ├── etl/                   # extração, transformação e carga
+│   ├── etl/                   # camadas bronze, silver, gold e interface de carga
 │   ├── logs/                  # configuração centralizada de logs
+│   ├── ml/                    # treino do modelo de classificação
 │   └── storage/               # camadas raw, cleaned e processed
 ├── tests/
 │   ├── unit/                  # verificações isoladas
-│   ├── integration/           # integração entre ETL e cache
+│   ├── integration/           # integração entre camadas do ETL e cache
 │   └── functional/            # chamada HTTP à API em execução
 └── .github/workflows/         # integração contínua
 ```
@@ -229,11 +259,18 @@ redis_host=localhost python -m uvicorn src.application.main:app --host 0.0.0.0 -
 
 ### `GET /pipeline/`
 
-Retorna os indicadores processados em JSON.
+Retorna os dados da camada escolhida em JSON.
+
+| Parâmetro | Valores | Padrão |
+|---|---|---|
+| `layer` | `raw`, `cleaned`, `processed` | `processed` |
 
 ```bash
 curl http://localhost:8000/pipeline/
+curl "http://localhost:8000/pipeline/?layer=raw"
 ```
+
+Na camada `raw` a resposta é um objeto com as duas tabelas: `{"fazendas": [...], "coletas": [...]}`.
 
 Exemplo resumido de resposta:
 
@@ -264,12 +301,12 @@ Os testes deste projeto são scripts executáveis como módulos Python.
 
 ```bash
 # Unitários
-python -m tests.unit.extract
+python -m tests.unit.raw
 python -m tests.unit.connection
 
 # Integração
-python -m tests.integration.transform
-python -m tests.integration.load
+python -m tests.integration.silver
+python -m tests.integration.gold
 python -m tests.integration.cache
 
 # Funcional — requer a API em execução e o pacote requests
@@ -279,8 +316,8 @@ python -m tests.functional.api
 
 Os testes de conexão e cache exigem Redis em execução. O teste funcional exige os dois serviços do Compose. No GitHub Actions, os fluxos ficam separados em:
 
-- `unit.yaml` — extração e conexão com Redis;
-- `integration.yaml` — transformação, carga e cache;
+- `unit.yaml` — leitura da camada raw e conexão com Redis;
+- `integration.yaml` — camadas silver e gold e cache;
 - `functional.yaml` — ambiente completo com Docker Compose e chamada à API.
 
 ## Configuração
@@ -302,9 +339,10 @@ A aplicação registra eventos no terminal e no arquivo `src/logs/app.log`, incl
 
 ## Próximos passos
 
-- tornar o pipeline regenerável somente a partir da camada `raw`;
+- concluir o treino do modelo (encoding, divisão treino/teste, métricas) e expô-lo na API;
+- adicionar testes e uma etapa de CI para o módulo de ML;
 - adicionar filtros por fazenda, silo, período, motorista e resultado;
-- preservar `fazenda_id` e `silo` como campos explícitos na resposta;
+- preservar `fazenda_id` e `silo` como campos explícitos na resposta da camada `processed`;
 - adotar modelos de resposta do Pydantic e documentação detalhada do contrato;
 - transformar os scripts de teste em uma suíte com `pytest` e métricas de cobertura;
 - incluir autenticação, paginação e observabilidade para um cenário de produção.

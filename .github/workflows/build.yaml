@@ -16,6 +16,10 @@ jobs:
     build:
 
         runs-on: ubuntu-latest
+        env:
+          redis_host: localhost
+          
+            
 
         steps:
 
