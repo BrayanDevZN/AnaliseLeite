@@ -39,11 +39,15 @@ class TrainModel:
         
 
         self.model = RandomForestClassifier(
-            n_estimators=200,
-            max_features="sqrt",
-           
+            n_estimators=180,
+            max_features=0.6,
+           class_weight="balanced",
             random_state=42,
-            min_samples_leaf=5
+            min_samples_leaf=9,
+            max_depth=8,
+            criterion="gini"
+            
+       
 
         )
 
