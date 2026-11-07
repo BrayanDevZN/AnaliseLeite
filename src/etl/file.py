@@ -27,7 +27,7 @@ class DfFile:
 
                 return None 
 
-            return pd.read_csv(path, sep=sep)
+            return pd.read_csv(path, sep=sep) if layer == "raw" else pd.read_parquet(path, sep=sep)
 
         except Exception as error:
 
