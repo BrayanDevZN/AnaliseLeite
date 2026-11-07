@@ -1,6 +1,4 @@
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report
 from src.etl.load import LoadData
 from pathlib import Path
 import joblib
@@ -16,15 +14,17 @@ class TrainDf:
         self.df = await  LoadData(layer="cleaned").run()
 
     async def _data(self) -> None:
-
-        self.x = self.df[[ "data","tanque", "temperatura", "ccs", "cpp",
+        
+        self.x = self.df[["data","tanque", "temperatura", "ccs", "cpp",
                           "silo"]]
 
         self.df["resultado_exame"] = self.df["resultado_exame"][
             self.df["resultado_exame"] == "aprovado"
         ]
 
-        self.x = self.df["resultado_exame"]
+        self.x["data"] = self.x["data"].astype(str)
+
+        self.y = self.df["resultado_exame"]
 
     async def _train(self) -> None:
 

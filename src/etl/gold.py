@@ -1,33 +1,14 @@
+from .silver import Silver
 from src.logs.log import logger
 import pandas as pd
-from src.etl.extract import ExtractData
-import os
-from pathlib import Path
-class TransformData:
+
+
+class Gold(Silver):
 
     def __init__(self)-> None:
+        super().__init__()
 
-        self.BASE_DIR = Path(__file__).resolve().parent.parent / "storage"
         
-        
-
-
-
-    #Le o dataframe
-    def _read(self) -> None:
-
-        try:
-
-            logger.info("Lendo na camada cleaned...")
-            self.df = pd.read_parquet(path=self.BASE_DIR / "cleaned/fazendas_analise.parquet")
-
-        except Exception as e:
-            logger.error(e)
-            raise Exception(e)
-
-       
-   
-
     #Rankeia do menor pro maior  pelo cpp e ccs
     def _ranking(self) -> None:
 
@@ -37,7 +18,6 @@ class TransformData:
     def _result(self) -> None:
 
         self.df["resultado_exame"] = (self.df["resultado_exame"] == "aprovado").astype(int)
-       
 
     #Agrupa pelas fazendas 
     def _group(self) -> None:
@@ -69,7 +49,7 @@ class TransformData:
                 }
             )
 
-            
+           
         except Exception as e:
             logger.error(e)
             raise Exception(e)
@@ -81,70 +61,22 @@ class TransformData:
         self.df = self.df.rename(columns={"resultado_exame": "media_aprovacao"})
         self.df["media_aprovacao"] = self.df["media_aprovacao"].round(2)
 
-    
 
-    #Cria o caminho se não existir
-    def _path(self) -> None:
+    def get_gold(self) -> None:
 
-        self.BASE_DIR.mkdir(exist_ok=True, parents=True)
+        self.df = self.read(layer="processed")
 
+        if self.df is None:
 
-    #Salva o dataframe
-    def _save(self) -> None:
+            self.df = self.get_silver()
 
-        try:
+            logger.info("Executing layer processed...")
 
-            logger.info("Salvando na camada processed...")
-
-            self.df.to_parquet(path=self.BASE_DIR /  "processed" / "fazenda_analise_resultado.parquet")
-
-        except Exception as e:
-                    logger.error(e)
-                    raise Exception(e)
-
-
-    #Executa os metodos e retorna o dataframe
-    async def run(self) -> pd.DataFrame:
-
-        self._read()
-        
-        self._result()
-        self._group()
-        self._rename()
-        self._ranking()
-        self._path()
-        self._save()
-
+            self._result()
+            self._group()
+            self._rename()
+            self._ranking()
+            self.save(layer="processed", df=self.df)
 
         return self.df
-
-
-
-
-    
-
-
-    
-
-    
-
-     
-
-
-
-
-    
-
-
-    
-
-
-
-
-    
-
-    
-
-
-    
-        
+            
