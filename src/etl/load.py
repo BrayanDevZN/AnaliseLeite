@@ -81,12 +81,12 @@ class LoadData:
 
 
     #Executa os metodos e retorna os dados
-    async def run(self) -> dict:
+    async def run(self) -> pd.DataFrame:
 
         await self._layer()
         await self._execute()
 
-        return self.df.to_dict(orient="records")
+        return self.df
 
 
 

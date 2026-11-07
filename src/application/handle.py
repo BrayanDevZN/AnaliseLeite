@@ -24,7 +24,7 @@ async def get(layer:Literal["processed", "cleaned", "raw"]|None=None):
 
         return JSONResponse(
             status_code=201,
-            content=data
+            content=data.to_dict(orient="records")
         )
 
     except Exception as e:
