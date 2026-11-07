@@ -17,10 +17,6 @@ class TrainDf:
         
         self.x = self.df[["data", "temperatura", "ccs", "cpp"]]
 
-        self.df["resultado_exame"] = self.df["resultado_exame"][
-            self.df["resultado_exame"] == "aprovado"
-        ]
-
         self.x["year"] = self.x["data"].dt.year
         self.x["month"] = self.x["data"].dt.month
         self.x["day"] = self.x["data"].dt.dayofweek
@@ -28,11 +24,11 @@ class TrainDf:
 
         
 
-        self.y = self.df["resultado_exame"]
+        self.y = (self.df["resultado_exame"] == "reprovado").astype(int) 
 
     async def _train(self) -> None:
 
-        model = RandomForestClassifier(
+        self.model = RandomForestClassifier(
             n_estimators=200,
             max_features="sqrt",
             class_weight="balanced",
@@ -41,13 +37,15 @@ class TrainDf:
 
         )
 
-        model.fit(X=self.x, y=self.y)
+        self.model.fit(X=self.x, y=self.y)
 
     async def _save_model(self) -> None:
 
-        self.BASE_DIR.mkdir(exist_ok=True)
+        path = self.BASE_DIR / "models"
 
-        joblib.dump(self.BASE_DIR / "models/predict.joblib")
+        path.mkdir(exist_ok=True)
+
+        joblib.dump(self.model, path / "joblib")
 
     async def run(self) -> None:
 

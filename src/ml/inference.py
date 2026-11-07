@@ -1,0 +1,93 @@
+import joblib 
+from pathlib import Path 
+import pandas as pd
+from src.logs.log import logger
+from sklearn.ensemble import RandomForestClassifier
+
+class ModelInference:
+
+    def __init__(self)-> None:
+
+        self.BASE_DIR = Path(__file__).resolve().parent / "models/joblib"
+        self._load()
+
+    def _load(self) -> None:
+
+        logger.info("Loading model...")
+
+        self.model:RandomForestClassifier = joblib.load(self.BASE_DIR)
+
+        logger.success("model loaded with success")
+
+    def response(self, data:str, temperatura:float, ccs:float, cpp:float) -> str:
+
+        logger.info("Generating response from model...")
+
+        schema = pd.DataFrame(
+            [{
+                "data": data,
+                "temperatura": temperatura,
+                "ccs": ccs,
+                "cpp": cpp
+            }]
+        )
+
+        schema["data"] = pd.to_datetime(schema["data"])
+        schema["month"] = schema["data"].dt.month
+        schema["year"] = schema["data"].dt.year
+        schema["day"] = schema["data"].dt.dayofyear
+        schema = schema.drop(columns=["data"])
+        schema = schema[self.model.feature_names_in_]
+
+        resp = self.model.predict(schema).item()
+        logger.success("Response generate with success")
+
+        return "aprovado" if resp == 0 else "reprovado"
+
+    
+
+    def response_dataframe(self, df:pd.DataFrame) -> pd.DataFrame:
+
+        columns = ["data", "temperatura", "ccs", "cpp"]
+        schema = df.copy()
+
+        for column in columns:
+
+            if not column in df.columns:
+                raise KeyError(f"Expeted column {column}")
+
+        droped = []
+
+        for column in df.columns:
+            if not column in columns:
+
+                droped.append(column)
+
+        if droped:
+
+            schema = schema.drop(columns=droped)
+            logger.info(f"Droped columns {" ,".join(droped)}")
+
+        logger.info("Generating response for dataframe...")
+
+        schema["data"] = pd.to_datetime(schema["data"])
+        schema["month"] = schema["data"].dt.month
+        schema["year"] = schema["data"].dt.year
+        schema["day"] = schema["data"].dt.dayofyear
+        schema = schema.drop(columns=["data"])
+        schema = schema[self.model.feature_names_in_]
+
+        response = self.model.predict(schema)
+
+        df["predict"] = pd.Series(response).map({1: "reprovado", 0: "aprovado"})
+
+        logger.success("Response generated with success")
+
+        return df
+
+
+               
+
+
+
+        
