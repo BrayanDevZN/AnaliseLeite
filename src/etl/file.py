@@ -11,7 +11,8 @@ class DfFile:
         self.BASE_DIR = Path(__file__).resolve().parent.parent / "storage"
         
 
-    def read(self, layer:Literal["raw", "cleaned", "processed"], name:str="analise_leite.csv") -> pd.DataFrame|None:
+    def read(self, layer:Literal["raw", "cleaned", "processed"], name:str="analise_leite.csv",
+             sep:str=",") -> pd.DataFrame|None:
 
         try:
 
@@ -26,7 +27,7 @@ class DfFile:
 
                 return None 
 
-            return pd.read_csv(path, sep=";")
+            return pd.read_csv(path, sep=sep)
 
         except Exception as error:
 
@@ -40,11 +41,11 @@ class DfFile:
             path = self.BASE_DIR / layer
             path.mkdir(exist_ok=True)
 
-            path = path / "analise_leite.csv"
+            path = path / "analise_leite.parquet"
 
             logger.info(f"Saving dataframe in {path}...")
 
-            df.to_csv(path, index=False)
+            df.to_parquet(path, index=False)
 
             logger.success(f"{path} saved with success")
 

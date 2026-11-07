@@ -17,8 +17,8 @@ class Bronze(DfFile):
 
 
         data = {
-            "fazendas": self.read(layer="raw", name="fazendas.csv"),
-            "coletas": self.read(layer="raw", name="coletas.csv")
+            "fazendas": self.read(layer="raw", name="fazendas.csv", sep=";"),
+            "coletas": self.read(layer="raw", name="coletas.csv", sep=";")
         }
 
         logger.success("layer raw executed with success")
