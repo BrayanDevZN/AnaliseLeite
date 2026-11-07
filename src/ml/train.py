@@ -15,14 +15,18 @@ class TrainDf:
 
     async def _data(self) -> None:
         
-        self.x = self.df[["data","tanque", "temperatura", "ccs", "cpp",
-                          "silo"]]
+        self.x = self.df[["data", "temperatura", "ccs", "cpp"]]
 
         self.df["resultado_exame"] = self.df["resultado_exame"][
             self.df["resultado_exame"] == "aprovado"
         ]
 
-        self.x["data"] = self.x["data"].astype(str)
+        self.x["year"] = self.x["data"].dt.year
+        self.x["month"] = self.x["data"].dt.month
+        self.x["day"] = self.x["data"].dt.dayofweek
+        self.x = self.x.drop(columns=["data"])
+
+        
 
         self.y = self.df["resultado_exame"]
 

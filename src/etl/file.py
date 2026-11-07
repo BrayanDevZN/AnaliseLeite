@@ -11,8 +11,7 @@ class DfFile:
         self.BASE_DIR = Path(__file__).resolve().parent.parent / "storage"
         
 
-    def read(self, layer:Literal["raw", "cleaned", "processed"], name:str="analise_leite.csv",
-             sep:str=",") -> pd.DataFrame|None:
+    def read(self, layer:Literal["raw", "cleaned", "processed"], name:str="analise_leite.parquet") -> pd.DataFrame|None:
 
         try:
 
@@ -27,7 +26,7 @@ class DfFile:
 
                 return None 
 
-            return pd.read_csv(path, sep=sep) if layer == "raw" else pd.read_parquet(path, sep=sep)
+            return pd.read_csv(path, sep=";") if layer == "raw" else pd.read_parquet(path)
 
         except Exception as error:
 
