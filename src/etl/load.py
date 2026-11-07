@@ -4,9 +4,11 @@ import pandas as pd
 import os
 from src.etl.transform import TransformData
 from src.etl.extract import ExtractData
+from typing import Literal
 class LoadData:
 
-    def __init__(self)-> None:
+    def __init__(self, layer:Literal["raw", "cleaned", "processed"]|None=None)-> None:
+        self.layer = layer
 
         self.BASE_DIR = Path(__file__).resolve().parent.parent / "storage"
 
@@ -16,7 +18,23 @@ class LoadData:
 
         try:
 
-            layers = ["processed", "cleaned", "raw"]
+
+
+            
+
+            if self.layer is not None:
+                match self.layer:
+                    case "processed":
+                        layers = ["processed", "cleaned", "raw"]
+                    case "cleaned":
+                        layers = ["cleaned", "raw"]
+
+                    case "raw":
+                        layers = ["raw"]
+
+            else:
+                layers = ["processed", "cleaned", "raw"]
+
 
             for layer in layers:
 

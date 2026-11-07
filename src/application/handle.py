@@ -2,11 +2,12 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from src.etl.load import LoadData
 from src.cache.manage import client
+from typing import Literal
 router_pipeline = APIRouter(prefix="/pipeline", tags=["pipeline"])
 
 
 @router_pipeline.get("/")
-async def get():
+async def get(layer:Literal["processed", "cleaned", "raw"]|None=None):
 
     try:
 
@@ -15,7 +16,7 @@ async def get():
         if not data:
 
 
-            instance = LoadData()
+            instance = LoadData(layer=layer)
 
             data = await instance.run()
 
