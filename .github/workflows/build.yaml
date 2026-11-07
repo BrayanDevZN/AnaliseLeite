@@ -34,8 +34,8 @@ jobs:
 
             - name: execute unit
               run: |
-               run python -m tests.unit.connection
-               run python -m tests.unit.raw
+                python -m tests.unit.connection
+                python -m tests.unit.raw
 
             - name: execute integration 
               run: |
