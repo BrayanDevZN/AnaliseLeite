@@ -26,7 +26,7 @@ jobs:
 
             - name: run docker
               run: |
-               docker compose -f src/controller/compose.yml --build -d
+               docker compose -f src/controller/compose.yml up --build -d
                sleep 10
 
             - name: install dependences

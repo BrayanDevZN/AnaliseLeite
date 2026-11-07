@@ -1,5 +1,5 @@
 from sklearn.ensemble import RandomForestClassifier
-from src.etl.load import LoadData
+from src.etl.interface import LoadData
 from pathlib import Path
 import joblib
 
@@ -11,7 +11,7 @@ class TrainDf:
 
     async def _load(self) -> None:
 
-        self.df = await  LoadData(layer="cleaned").run()
+        self.df =   LoadData(layer="cleaned").load()
 
     async def _data(self) -> None:
         
