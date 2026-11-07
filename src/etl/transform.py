@@ -107,7 +107,7 @@ class TransformData:
     async def run(self) -> pd.DataFrame:
 
         self._read()
-        self._filter_comunit()
+        
         self._result()
         self._group()
         self._rename()

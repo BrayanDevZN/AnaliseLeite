@@ -4,8 +4,6 @@ from sklearn.metrics import classification_report
 from src.etl.load import LoadData
 from pathlib import Path
 import joblib
-df = LoadData(layer="cleaned").run()
-print(df)
 
 class TrainDf:
 
@@ -19,7 +17,7 @@ class TrainDf:
 
     async def _data(self) -> None:
 
-        self.x = self.df[[ "data","tanque", "temperatura", "css", "cpp",
+        self.x = self.df[[ "data","tanque", "temperatura", "ccs", "cpp",
                           "silo"]]
 
         self.df["resultado_exame"] = self.df["resultado_exame"][
