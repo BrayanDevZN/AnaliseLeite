@@ -1,0 +1,56 @@
+name: build
+
+on:
+    push:
+        branches:
+            - main
+            - develop
+    pull_request:
+        branches:
+
+            - main
+            - develop
+
+jobs:
+
+    build:
+
+        runs-on: ubuntu-latest
+
+        steps:
+
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-python@v5
+
+
+            - name: run docker
+              run: |
+               docker compose -f src/controller/compose.yml --build -d
+               sleep 10
+
+            - name: install dependences
+              run: pip install -r src/controller/requirements.txt
+
+            - name: execute unit
+              run: |
+               run python -m tests.unit.connection
+               run python -m tests.unit.raw
+
+            - name: execute integration 
+              run: |
+               python -m tests.integration.cache
+               python -m tests.integration.silver
+               python -m tests.integration.gold
+
+            - name: execute functional
+              run : |
+                 pip install requests
+                 python -m tests.functional.api
+
+            
+
+
+
+
+    
