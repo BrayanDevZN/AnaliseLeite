@@ -10,14 +10,14 @@ class ControlCache:
         self.con = connection
 
     #salva o cache
-    async def save(self, data:dict) -> None:
+    async def save(self, data:str) -> None:
 
         try:
             logger.info("Salvando cache...")
 
             with self.con.pipeline() as session:
 
-                session.hset(name="cache", mapping=data)
+                session.set(name="cache", value=data)
                 session.expire(time=120, name="cache")
                 session.execute()
 

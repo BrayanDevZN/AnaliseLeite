@@ -50,6 +50,7 @@ jobs:
             - name: execute functional
               run : |
                  pip install requests
+                 python -m tests.functional.model
                  python -m tests.functional.api
 
             

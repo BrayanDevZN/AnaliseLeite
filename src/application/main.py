@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from src.application.handle import router_pipeline
-
+from src.application.handles.pipeline import router_pipeline
+from src.application.handles.model import router_model
 
 app = FastAPI()
 
@@ -16,6 +16,7 @@ app.add_middleware(
 
 #Inclui a rota
 app.include_router(router_pipeline)
+app.include_router(router_model)
 
 
 

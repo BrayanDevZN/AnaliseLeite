@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 from src.etl.interface import LoadData
 from src.cache.manage import client
 from typing import Literal
+import json
 router_pipeline = APIRouter(prefix="/pipeline", tags=["pipeline"])
 
 
@@ -28,7 +29,11 @@ async def get(layer:Literal["processed", "cleaned", "raw"]="processed"):
             else:
                 data = data.to_dict(orient="records")
 
-            client.save(data=data)
+            await client.save(data=json.dumps(data))
+
+        else:
+
+            data = json.loads(data)
 
         return JSONResponse(
             status_code=201,

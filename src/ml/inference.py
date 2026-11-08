@@ -35,7 +35,7 @@ class ModelInference:
 
         logger.success(f"model {self.model} loaded with success")
 
-    def response(self, data:str, temperatura:float, ccs:float, cpp:float, silo:str, 
+    def response(self, data:str, temperatura:float, ccs:float, cpp:float, 
                  estado:str, cidade:str, tanque:str) -> str:
 
         logger.info("Generating response...")
@@ -46,7 +46,7 @@ class ModelInference:
                 "temperatura": temperatura,
                 "ccs": ccs,
                 "cpp": cpp,
-                "silo": silo,
+                
                 "estado": estado,
                 "cidade": cidade,
                 "tanque": tanque
