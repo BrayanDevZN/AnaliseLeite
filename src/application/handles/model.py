@@ -29,6 +29,7 @@ async def response(data: SchemaResponse):
         )
 
 
+@router_model.post("/file")
 async def response_file(file: UploadFile = File(...)):
 
     try:
