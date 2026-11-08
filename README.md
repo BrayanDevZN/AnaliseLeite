@@ -6,10 +6,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/BrayanDevZN/AnaliseLeite/actions/workflows/unit.yaml"><img src="https://img.shields.io/github/actions/workflow/status/BrayanDevZN/AnaliseLeite/unit.yaml?branch=develop&style=for-the-badge&logo=githubactions&logoColor=white&label=Unit%20Tests" alt="Unit tests"></a>
-    <a href="https://github.com/BrayanDevZN/AnaliseLeite/actions/workflows/integration.yaml"><img src="https://img.shields.io/github/actions/workflow/status/BrayanDevZN/AnaliseLeite/integration.yaml?branch=develop&style=for-the-badge&logo=githubactions&logoColor=white&label=Integration%20Tests" alt="Integration tests"></a>
-    <a href="https://github.com/BrayanDevZN/AnaliseLeite/actions/workflows/functional.yaml"><img src="https://img.shields.io/github/actions/workflow/status/BrayanDevZN/AnaliseLeite/functional.yaml?branch=develop&style=for-the-badge&logo=githubactions&logoColor=white&label=Functional%20Tests" alt="Functional tests"></a>
-    <img src="https://img.shields.io/badge/CI%2FCD-GitHub_Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" alt="CI/CD with GitHub Actions">
+    <a href="https://github.com/BrayanDevZN/AnaliseLeite/actions/workflows/build.yaml"><img src="https://img.shields.io/github/actions/workflow/status/BrayanDevZN/AnaliseLeite/build.yaml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=Build%20%26%20Tests" alt="Build and tests"></a>
   </p>
 
   <p>
@@ -27,7 +24,7 @@
 
 ## Sobre o projeto
 
-O **Análise Leite** é um projeto de engenharia de dados voltado ao rastreamento da cadeia de coleta de uma cooperativa leiteira. Ele relaciona fazendas e coletas, trata os dados operacionais, calcula indicadores de qualidade, disponibiliza o resultado por uma API REST e prepara a base para um modelo de machine learning que prevê a aprovação dos exames.
+O **Análise Leite** é um projeto de engenharia de dados voltado ao rastreamento da cadeia de coleta de uma cooperativa leiteira. Ele relaciona fazendas e coletas, trata os dados operacionais, calcula indicadores de qualidade, disponibiliza o resultado por uma API REST e inclui um modelo de machine learning que estima se o exame de uma coleta será aprovado ou reprovado.
 
 O cenário parte de um problema real do setor: quando leite com resíduos ou fora dos padrões entra em um tanque comunitário, segue em um caminhão e chega a um silo, vários lotes podem ser afetados. Sem dados relacionados, é difícil reconstruir a origem do problema e distribuir responsabilidades de forma justa.
 
@@ -38,7 +35,7 @@ O pipeline ajuda a responder perguntas como:
 - quais volumes, temperaturas, níveis de CCS e CPP foram registrados;
 - quais tanques, motoristas e caminhões participaram da coleta;
 - como os dados de cadastro das fazendas se relacionam aos eventos de coleta;
-- quais características de uma coleta (temperatura, CCS, CPP, tanque, silo) estão associadas à reprovação do exame.
+- quais características de uma coleta (temperatura, CCS, CPP, tanque, localização) estão associadas à reprovação do exame.
 
 > Os dados presentes no repositório são fictícios e foram preparados para fins acadêmicos.
 
@@ -46,12 +43,12 @@ O pipeline ajuda a responder perguntas como:
 
 | Componente | Responsabilidade |
 |---|---|
-| **FastAPI** | Expõe o resultado do pipeline no endpoint `GET /pipeline/` |
+| **FastAPI** | Expõe o pipeline em `GET /pipeline/` e o modelo em `POST /model/` e `POST /model/file` |
 | **Pandas** | Lê, relaciona, limpa, agrupa e ordena os dados |
 | **Parquet / PyArrow** | Armazena as camadas tratada e processada de forma eficiente |
-| **scikit-learn / joblib** | Treina um `RandomForestClassifier` e persiste o modelo |
+| **scikit-learn / joblib** | Treina um `RandomForestClassifier` e persiste cada versão em `src/ml/models/` |
 | **Docker Compose** | Sobe a API em container |
-| **GitHub Actions** | Executa verificações unitárias, de integração e funcionais |
+| **GitHub Actions** | Workflow `build`: sobe a API com Docker Compose e executa os testes |
 
 Atualmente, a base contém:
 
@@ -66,7 +63,9 @@ O ETL segue a arquitetura em camadas (medalhão): **bronze** (`raw`), **silver**
 ```mermaid
 flowchart LR
     U[Cliente HTTP] -->|GET /pipeline/?layer=...| API[FastAPI]
+    U -->|POST /model/ ou /model/file| API
     API --> LOAD[LoadData]
+    API --> INFER[ModelInference]
 
     LOAD -->|raw| BRONZE[Bronze.get_raw]
     LOAD -->|cleaned| SILVER[Silver.get_silver]
@@ -82,8 +81,10 @@ flowchart LR
     SILVER --> RESP
     GOLD --> RESP
 
-    CLEAN -.-> TRAIN[TrainDf]
-    TRAIN -.-> MODEL[(predict.joblib)]
+    CLEAN -.-> TRAIN[TrainModel]
+    TRAIN -.-> MODEL[(src/ml/models/*.joblib)]
+    MODEL --> INFER
+    INFER --> RESP
 ```
 
 ### Fluxo de uma requisição
@@ -93,6 +94,13 @@ flowchart LR
 3. Cada camada reaproveita o arquivo já salvo quando ele existe e, se não existir, gera a partir da camada anterior.
 4. O resultado é convertido em JSON: uma lista de registros, ou um objeto com as tabelas `fazendas` e `coletas` na camada `raw`.
 5. A API responde com HTTP `201`.
+
+### Fluxo de uma previsão
+
+1. O cliente envia uma coleta em JSON (`POST /model/`) ou um arquivo `.parquet`/`.csv` com várias coletas (`POST /model/file`).
+2. `ModelInference` carrega o modelo salvo em `src/ml/models/` (a API usa o `anl_v2`).
+3. As colunas são preparadas do mesmo jeito que no treino: `data` vira ano, mês e dia, e `tanque`, `estado` e `cidade` viram colunas 0/1.
+4. O modelo prevê `aprovado` ou `reprovado` para cada coleta.
 
 ## Pipeline ETL
 
@@ -129,25 +137,27 @@ O módulo `src/etl/interface.py` mapeia `raw`, `cleaned` e `processed` para `get
 
 ## Machine learning
 
-O módulo `src/ml/train.py` (`TrainDf`) treina um classificador para prever se o exame de uma coleta é aprovado, a partir das informações registradas na coleta.
+O módulo `src/ml/train/` (`TrainModel`) treina um classificador que estima se o exame de uma coleta será **reprovado**, a partir de dados registrados na coleta.
 
 | Item | Detalhe |
 |---|---|
 | **Algoritmo** | `RandomForestClassifier` (scikit-learn) |
 | **Fonte dos dados** | Camada `cleaned`, com uma linha por coleta |
-| **Alvo** | `resultado_exame` (aprovado / reprovado) |
-| **Features** | `data`, `tanque`, `temperatura`, `ccs`, `cpp`, `silo` |
-| **Saída** | Modelo serializado com `joblib` em `src/ml/models/predict.joblib` |
+| **Alvo** | `resultado_exame`: `1` = reprovado, `0` = aprovado |
+| **Features** | `temperatura`, `ccs`, `cpp`, ano, mês e dia (derivados de `data`) e `estado`, `cidade` e `tanque` (codificados em colunas 0/1) |
+| **Saída** | Modelo serializado com `joblib` em `src/ml/models/<nome>.joblib` |
 
-Parâmetros: 200 árvores, `max_features="sqrt"`, `min_samples_leaf=5`, `class_weight="balanced"` (compensa o desbalanceamento entre aprovados e reprovados) e `random_state=42`.
+Parâmetros: 180 árvores, `max_depth=8`, `min_samples_leaf=9`, `max_features=0.6`, `criterion="gini"`, `class_weight="balanced"` (compensa o desbalanceamento entre aprovados e reprovados) e `random_state=42`.
 
-Para treinar, na raiz do projeto:
+Cada versão do modelo é salva com um nome escolhido por quem treina. O repositório traz `anl_v1`, `anl_v2` e `anl_alpine`, e a API usa o **`anl_v2`**.
+
+Gerenciar os modelos, na raiz do projeto:
 
 ```bash
-python -m src.ml.train
+python -m src.ml.train.model train anl_v3   # treina e salva src/ml/models/anl_v3.joblib
+python -m src.ml.train.model list           # lista os modelos disponíveis
+python -m src.ml.train.model drop anl_v3    # apaga um modelo
 ```
-
-> **Status:** o módulo de treino está em desenvolvimento. Ainda faltam a codificação das variáveis categóricas, a separação em treino e teste com métricas, e a integração com a API.
 
 ## Camadas de dados
 
@@ -155,15 +165,17 @@ python -m src.ml.train
 src/storage/
 ├── raw/        # arquivos CSV recebidos
 ├── cleaned/    # dados relacionados, tipados e salvos em Parquet
-└── processed/  # indicadores agregados, prontos para consumo
+├── processed/  # indicadores agregados, prontos para consumo
+└── test/       # arquivo de exemplo usado nos testes do modelo
 ```
 
 | Camada | Arquivo | Conteúdo |
 |---|---|---|
 | `raw` | `fazendas.csv` | Cadastro de fazendas, produtores, localização e preço por litro |
 | `raw` | `coletas.csv` | Eventos de coleta, qualidade, logística, silo e resultado de exame |
-| `cleaned` | `fazendas_analise.parquet` | Junção das fontes com tipos normalizados |
-| `processed` | `fazenda_analise_resultado.parquet` | Agregação analítica por fazenda e silo |
+| `cleaned` | `analise_leite.parquet` | Junção das fontes com tipos normalizados (uma linha por coleta) |
+| `processed` | `analise_leite.parquet` | Agregação analítica por fazenda e silo |
+| `test` | `analise_leite_teste.parquet` | Coletas de exemplo, no mesmo formato da `cleaned`, para testar o modelo |
 
 Os principais indicadores de qualidade são:
 
@@ -179,17 +191,22 @@ AnaliseLeite/
 ├── assets/                    # imagens usadas na documentação
 ├── documents/                 # enunciado e contexto do problema
 ├── src/
-│   ├── application/           # aplicação FastAPI e rotas
+│   ├── application/           # aplicação FastAPI
+│   │   ├── handles/           # rotas: pipeline.py e model.py
+│   │   └── schema.py          # modelo de entrada de POST /model/
 │   ├── controller/            # Dockerfile, Compose e dependências
 │   ├── etl/                   # camadas bronze, silver, gold e interface de carga
 │   ├── logs/                  # configuração centralizada de logs
-│   ├── ml/                    # treino do modelo de classificação
-│   └── storage/               # camadas raw, cleaned e processed
+│   ├── ml/
+│   │   ├── train/             # treino e gerenciamento de modelos (CLI)
+│   │   ├── models/            # modelos salvos (.joblib)
+│   │   └── inference.py       # carga do modelo e previsão
+│   └── storage/               # camadas raw, cleaned, processed e test
 ├── tests/
-│   ├── unit/                  # verificações isoladas
+│   ├── unit/                  # leitura da camada raw
 │   ├── integration/           # integração entre as camadas do ETL
-│   └── functional/            # chamada HTTP à API em execução
-└── .github/workflows/         # integração contínua
+│   └── functional/            # chamadas HTTP à API e ao modelo
+└── .github/workflows/         # workflow build (integração contínua)
 ```
 
 ## Como executar
@@ -217,6 +234,7 @@ docker compose -f src/controller/compose.yml up --build
 Quando os serviços estiverem prontos, acesse:
 
 - API: <http://localhost:8000/pipeline/>
+- Modelo: <http://localhost:8000/docs#/model> (rotas `POST /model/` e `POST /model/file`)
 - Swagger UI: <http://localhost:8000/docs>
 - OpenAPI: <http://localhost:8000/openapi.json>
 
@@ -260,27 +278,58 @@ curl "http://localhost:8000/pipeline/?layer=raw"
 
 Na camada `raw` a resposta é um objeto com as duas tabelas: `{"fazendas": [...], "coletas": [...]}`.
 
-Exemplo resumido de resposta:
+Exemplo resumido de resposta (camada `processed`):
 
 ```json
 [
   {
-    "nome_fazenda": "Sitio Agua Limpa I",
-    "produtor": "Ivan Siqueira",
-    "cidade": "Pitangui",
+    "nome_fazenda": "Sitio Campo Verde II",
+    "produtor": "Nelson Aguiar",
+    "cidade": "Mateus Leme",
     "estado": "MG",
-    "preco_litro": 26.3,
-    "tanque": "TC03",
-    "tipo_tanque": "comunitario",
-    "volume_litros": 1617.3,
-    "temperatura": 4.55,
-    "ccs": 346.7,
-    "cpp": 255.6,
-    "motorista": "Everaldo Pires",
-    "caminhao": "CAM-101",
-    "media_aprovacao": 1.0
+    "preco_litro": 19.62,
+    "tanque": "TI15",
+    "tipo_tanque": "individual",
+    "volume_litros": 1227.78,
+    "temperatura": 4.38,
+    "ccs": 306.44,
+    "cpp": 221.44,
+    "motorista": "Djalma Souto",
+    "caminhao": "CAM-102",
+    "media_aprovacao": 0.89
   }
 ]
+```
+
+### `POST /model/file`
+
+Recebe um arquivo `.parquet` ou `.csv` (separado por `;`) com várias coletas e devolve cada linha com a coluna `predict` (`aprovado` ou `reprovado`). O arquivo precisa ter as colunas `data`, `temperatura`, `ccs`, `cpp`, `tanque`, `estado` e `cidade`. As demais colunas são ignoradas na previsão.
+
+```bash
+curl -X POST "http://localhost:8000/model/file" \
+  -F "file=@src/storage/test/analise_leite_teste.parquet"
+```
+
+O campo do formulário deve se chamar `file`. Qualquer outra extensão é recusada.
+
+### `POST /model/`
+
+Recebe uma coleta em JSON e devolve `"aprovado"` ou `"reprovado"`.
+
+| Campo | Tipo | Exemplo |
+|---|---|---|
+| `temperature` | número | `4.2` |
+| `state` | sigla do estado (UF) | `"MG"` |
+| `data` | texto `AAAA-MM-DD` | `"2026-03-02"` |
+| `ccs` | número | `480` |
+| `cpp` | número | `250` |
+| `cidade` | texto, sem acento | `"Betim"` |
+| `tanque` | texto | `"TC01"` |
+
+```bash
+curl -X POST "http://localhost:8000/model/" \
+  -H "Content-Type: application/json" \
+  -d '{"temperature": 4.2, "state": "MG", "data": "2026-03-02", "ccs": 480, "cpp": 250, "cidade": "Betim", "tanque": "TC01"}'
 ```
 
 ## Testes e integração contínua
@@ -295,16 +344,15 @@ python -m tests.unit.raw
 python -m tests.integration.silver
 python -m tests.integration.gold
 
-# Funcional — requer a API em execução e o pacote requests
+# Funcionais — requerem o pacote requests
 pip install requests
-python -m tests.functional.api
+python -m tests.functional.model   # avalia o modelo no arquivo de teste (roda sem a API)
+python -m tests.functional.api     # chama a API em execução (GET /pipeline e POST /model/file)
 ```
 
-O teste funcional exige a API do Compose em execução. No GitHub Actions, os fluxos ficam separados em:
+O teste `functional.api` exige a API do Compose em execução.
 
-- `unit.yaml` — leitura da camada raw;
-- `integration.yaml` — camadas silver e gold;
-- `functional.yaml` — ambiente completo com Docker Compose e chamada à API.
+No GitHub Actions há um único workflow, `build.yaml`, executado em *push* e *pull request* para `main` e `develop`. Ele sobe a API com Docker Compose, instala as dependências e roda, nesta ordem, o teste unitário, os de integração e os funcionais.
 
 ## Configuração
 
@@ -316,12 +364,12 @@ Porta padrão:
 
 ## Logs
 
-A aplicação registra eventos no terminal e no arquivo `src/logs/app.log`, incluindo leitura de camadas, transformações e erros do pipeline.
+A aplicação registra eventos no terminal com a biblioteca `watchguardian` (configurada em `src/logs/log.py`), incluindo leitura de camadas, transformações, carga de modelos e erros.
 
 ## Próximos passos
 
-- concluir o treino do modelo (encoding, divisão treino/teste, métricas) e expô-lo na API;
-- adicionar testes e uma etapa de CI para o módulo de ML;
+- avaliar o modelo com divisão treino/teste por fazenda e métricas de recall e precisão da classe `reprovado`;
+- testar features de histórico por fazenda (médias e taxa de reprovação das coletas anteriores);
 - adicionar filtros por fazenda, silo, período, motorista e resultado;
 - preservar `fazenda_id` e `silo` como campos explícitos na resposta da camada `processed`;
 - adotar modelos de resposta do Pydantic e documentação detalhada do contrato;
