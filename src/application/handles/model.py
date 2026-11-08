@@ -4,6 +4,7 @@ router_model = APIRouter(prefix="/model", tags=["model"])
 import pandas as pd
 instance = ModelInference(model="anl_v2")
 from src.application.schema import SchemaResponse
+import io
 @router_model.post("/")
 async def response(data: SchemaResponse):
 
@@ -33,18 +34,22 @@ async def response(data: SchemaResponse):
 async def response_file(file: UploadFile = File(...)):
 
     try:
-
-        end = [".csv", ".parquet"]
-
-        if file.filename.endswith((".csv", ".parquet")):
-            raise HTTPException(
-                detail="Expeted csv or parquet file",
-                status_code=429
-            )
-
         content = await file.read()
 
-        df = pd.DataFrame(content)
+        if file.filename.endswith(".parquet"):
+            
+            df = pd.read_parquet(io.BytesIO(content))
+
+        elif file.filename.endswith(".csv"):
+            df = pd.read_csv(io.BytesIO(content), sep=";")
+
+        else:
+            raise HTTPException(
+                status_code=429,
+                detail="Expeted csv or parquet file"
+            )
+
+      
 
         response = instance.response_dataframe(df=df)
 
