@@ -26,8 +26,6 @@ def test_model() -> None:
     percent_acert = acerts / total 
     percent_error = error / total 
     print(f"percentual de acertos: {round(percent_acert * 100, 1)}% \npercentual de erros: {round(percent_error * 100, 1)}%")
-    print(f"o modelo é {"valido" if percent_acert >= mean_result else "invalido"}")
-
-
+    
 if __name__ == "__main__":
     test_model()
