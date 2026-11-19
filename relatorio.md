@@ -40,7 +40,7 @@ Antes do projeto, a equipe entendia o caso principalmente como um erro individua
 
 O diagrama organiza causas potenciais do problema em seis dimensões. As causas abaixo são hipóteses de análise coerentes com o cenário e com os requisitos levantados; devem ser confirmadas ou detalhadas nas conversas com o gestor.
 
-\!\[\](./diagrams/ishikawa.png)
+![Ishikawa](./diagrams/ishikawa.png)
 
 ## 4\. Análise SWOT
 
@@ -123,13 +123,13 @@ O relatório final da equipe também descreve uma implementação técnica com E
 
 ## 7\. Diagrama de casos de uso
 
-\!\[\](./diagrams/Diagrama-de-casos-de-uso.png)
+![Diagrama-de-casos-de-uso](./diagrams/Diagrama-de-casos-de-uso.png)
 
 **Atores principais:** produtor, funcionário da cooperativa, motorista, laboratório e gestor. As permissões específicas de cada ator devem ser confirmadas com o cliente. O diagrama apresenta as principais interações esperadas, não uma definição final de telas ou tecnologia.
 
 ## 8\. Diagrama de classes conceitual
 
-\!\[\](./diagrams/Diagrama-de-classes-conceitual.png)
+![Diagrama de classes conceitual](./diagrams/Diagrama-de-classes-conceitual.png)
 
 **Observação de modelagem:** `ParticipacaoTanque` representa o vínculo entre produtores e tanques comunitários, inclusive com período de participação. A associação entre `Carga` e `Coleta` é essencial para reconstruir quais coletas foram misturadas. A relação entre exame e descarga deve ser ajustada conforme o procedimento real de amostragem do laboratório. O modelo é conceitual e deve ser validado com o gestor.
 
