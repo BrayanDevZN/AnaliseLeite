@@ -1,10 +1,10 @@
-from base.src.etl.train import Train
+from base.src.etl.interface import LoadData
 import asyncio
 
 try:
 
-    instance = Train()
-    df = instance.get_train()
+    instance = LoadData(layer="train")
+    df = instance.load()
     print(df)
 
 
