@@ -2,7 +2,7 @@ import sys
 from .template import TrainModel
 import os
 from pathlib import Path
-from src.logs.log import logger
+from base.src.logs.log import logger
 import asyncio
 if __name__ == "__main__":
 
