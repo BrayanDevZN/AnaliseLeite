@@ -2,7 +2,7 @@ services:
     pipeline:
       build:
         context: .
-        dockerfile: Dockerfile
+        dockerfile: ../..
       
       ports:
         - "8000:8000"
