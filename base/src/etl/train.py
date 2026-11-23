@@ -53,6 +53,23 @@ class Train(Silver):
 
                 logger.success("Files merge with success")
 
+            elif files and len(files) == 1:
+
+                 if "train_v" in files[0]:
+                      self.df = self.read(layer="train", name=self.path / files[0])
+                      self.name = files[0]
+                 else:
+
+                      logger.info(f"Merging files in {self.path}...")
+                      
+                      df = self.read(layer="train", name=self.name)
+                      self.df = pd.concat([self.df, df], ignore_index=True)
+                      del_path = self.path / files[0]
+                      os.remove(del_path)
+                      logger.info(f"Removed path {del_path}!!")
+                      logger.success("Files merge with success")
+                 
+
             if not os.path.exists(self.path / self.name):
 
                 self.save(name=self.name, layer="train", df=self.df)
