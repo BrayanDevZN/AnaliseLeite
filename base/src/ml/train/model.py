@@ -4,8 +4,7 @@ import os
 from pathlib import Path
 from base.src.logs.log import logger
 import asyncio
-if __name__ == "__main__":
-
+def main():
     args = sys.argv
     args.pop(0)
     BASE_DIR = Path(__file__).resolve().parent.parent / "models"
@@ -46,6 +45,10 @@ if __name__ == "__main__":
 
             os.remove(BASE_DIR / f"{name}.joblib")
             logger.info(f"Droped model {name}")
+
+
+if __name__ == "__main__":
+    main()
 
         
 
