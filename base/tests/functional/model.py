@@ -2,7 +2,10 @@ from pathlib import Path
 from base.src.ml.inference import ModelInference
 import pandas as pd
 
+class RunModel:
 
+    @staticmethod
+    def df(df:pd.DataFrame, model:str|None=None)
 
 def test_model() -> None:
 

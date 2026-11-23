@@ -6,7 +6,7 @@ from sklearn.ensemble import RandomForestClassifier
 import os
 class ModelInference:
 
-    def __init__(self, model:str)-> None:
+    def __init__(self, model:str|None=None)-> None:
 
         self.BASE_DIR = Path(__file__).resolve().parent / "models"
         self.model = model
@@ -18,9 +18,12 @@ class ModelInference:
     #Pega o nome do modelo
     def _get_model(self) -> None:
 
-        models = [str(model).replace(".joblib", "")  for model in os.listdir(self.BASE_DIR)]
-        print(models)
-        if not self.model in models:
+        self.models = [str(model).replace(".joblib", "")  for model in os.listdir(self.BASE_DIR)]
+        if self.model is None:
+            self.model = str(max(self.BASE_DIR.glob("*.joblib"), key=lambda p: p.stat().st_mtime)
+                             .replace(".joblib", ""))
+       
+        if not self.model in self.models:
             logger.error(f"Not exist model {self.model}")
             raise
 
@@ -111,6 +114,10 @@ class ModelInference:
         logger.success("Response generated with success")
 
         return df
+
+    def get_models(self) -> list[str]:
+
+        return self.models
 
 
                
