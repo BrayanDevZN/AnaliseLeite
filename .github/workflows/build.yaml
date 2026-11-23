@@ -40,18 +40,19 @@ jobs:
 
             - name: execute unit
               run: |
-                python -m tests.unit.raw
+                python -m base.tests.unit.raw
 
             - name: execute integration 
               run: |
-               python -m tests.integration.silver
-               python -m tests.integration.gold
+               python -m base.tests.integration.silver
+               python -m base.tests.integration.train
+               python -m base.tests.integration.gold
 
             - name: execute functional
               run : |
                  pip install requests
-                 python -m tests.functional.model
-                 python -m tests.functional.api
+                 python -m base.tests.functional.model
+                 python -m base.tests.functional.api
 
             
 
