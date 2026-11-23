@@ -11,7 +11,7 @@ class DfFile:
         self.BASE_DIR = Path(__file__).resolve().parent.parent / "storage"
         
 
-    def read(self, layer:Literal["raw", "cleaned", "processed"], name:str="analise_leite.parquet") -> pd.DataFrame|None:
+    def read(self, layer:Literal["raw", "cleaned", "processed", "train"], name:str="analise_leite.parquet") -> pd.DataFrame|None:
 
         try:
 
@@ -33,14 +33,14 @@ class DfFile:
             logger.error(f"error: {error}")
             raise
 
-    def save(self, df:pd.DataFrame, layer:Literal["cleaned", "processed"]) -> None:
+    def save(self, df:pd.DataFrame, layer:Literal["cleaned", "processed", "train"], name:str="analise_leite.parquet") -> None:
 
         try:
 
             path = self.BASE_DIR / layer
             path.mkdir(exist_ok=True)
 
-            path = path / "analise_leite.parquet"
+            path = path / name
 
             logger.info(f"Saving dataframe in {path}...")
 

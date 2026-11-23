@@ -4,7 +4,7 @@ from typing import Literal
 import pandas as pd
 class LoadData(Gold):
 
-    def __init__(self, layer:Literal["processed", "cleaned", "raw"]="processed")->None:
+    def __init__(self, layer:Literal["processed", "cleaned", "raw", "train"]="processed")->None:
         super().__init__()
         self.layer = layer 
 
