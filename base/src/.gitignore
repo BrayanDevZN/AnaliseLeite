@@ -3,3 +3,4 @@ __pycache__/
 *.log
 ../leiame.md
 src/ml/models/joblib
+analiseleite.egg-info/
