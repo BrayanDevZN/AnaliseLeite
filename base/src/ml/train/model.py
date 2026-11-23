@@ -13,14 +13,16 @@ if __name__ == "__main__":
 
     if args[0] == "train":
 
-        if len(args) != 2:
-            raise ValueError("Expeted name model")
+        if len(args) == 2:
+            
+            name = args[1]
+            if name in models:
+                logger.warning(f"model will be {name} recreated")
+
+        else:
+            name = f"anl_{len(models) + 1}"
 
         
-        name = args[1]
-
-        if name in models:
-            logger.warning(f"model will be {name} recreated")
 
         instance = TrainModel(model_name=name)
         asyncio.run(instance.run())

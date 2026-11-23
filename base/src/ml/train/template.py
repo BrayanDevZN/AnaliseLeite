@@ -13,7 +13,7 @@ class TrainModel:
 
     async def _load(self) -> None:
 
-        self.df =   LoadData(layer="cleaned").load()
+        self.df =   LoadData(layer="train").load()
 
     async def _data(self) -> None:
 
