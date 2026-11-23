@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
-anl = "base.src.ml.train.model:main"
+model = "base.src.ml.train.model:main"
 
 [tool.setuptools]
 package-dir = { "base" = "." }

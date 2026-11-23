@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from base.src.logs.log import logger
 import asyncio
-USAGE = "Uso: anl <train [nome] | list | drop <nome>>"
+USAGE = "Uso: model <train [nome] | list | drop <nome>>"
 
 
 def main() -> None:
