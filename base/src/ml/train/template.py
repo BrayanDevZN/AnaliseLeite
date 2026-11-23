@@ -1,5 +1,5 @@
 from sklearn.ensemble import RandomForestClassifier
-from src.etl.interface import LoadData
+from base.src.etl.interface import LoadData
 from pathlib import Path
 from base.src.logs.log import logger
 import joblib
