@@ -19,7 +19,7 @@
 </div>
 
 <p align="center">
-  <img src="assets/analise-leite-flow.gif" alt="Animated milk traceability flow from farm to dairy plant" width="100%">
+  <img src="base/assets/analise-leite-flow.gif" alt="Animated milk traceability flow from farm to dairy plant" width="100%">
 </p>
 
 ## Sobre o projeto
@@ -151,7 +151,7 @@ Parâmetros: 180 árvores, `max_depth=8`, `min_samples_leaf=9`, `max_features=0.
 
 Cada versão do modelo é salva com um nome escolhido por quem treina. O repositório traz `anl_v1`, `anl_v2` e `anl_alpine`, e a API usa o **`anl_v2`**.
 
-Gerenciar os modelos, na raiz do projeto:
+Gerenciar os modelos, na pasta `base/`:
 
 ```bash
 python -m src.ml.train.model train anl_v3   # treina e salva src/ml/models/anl_v3.joblib
@@ -188,24 +188,27 @@ Os principais indicadores de qualidade são:
 
 ```text
 AnaliseLeite/
-├── assets/                    # imagens usadas na documentação
-├── documents/                 # enunciado e contexto do problema
-├── src/
-│   ├── application/           # aplicação FastAPI
-│   │   ├── handles/           # rotas: pipeline.py e model.py
-│   │   └── schema.py          # modelo de entrada de POST /model/
-│   ├── controller/            # Dockerfile, Compose e dependências
-│   ├── etl/                   # camadas bronze, silver, gold e interface de carga
-│   ├── logs/                  # configuração centralizada de logs
-│   ├── ml/
-│   │   ├── train/             # treino e gerenciamento de modelos (CLI)
-│   │   ├── models/            # modelos salvos (.joblib)
-│   │   └── inference.py       # carga do modelo e previsão
-│   └── storage/               # camadas raw, cleaned, processed e test
-├── tests/
-│   ├── unit/                  # leitura da camada raw
-│   ├── integration/           # integração entre as camadas do ETL
-│   └── functional/            # chamadas HTTP à API e ao modelo
+├── base/
+│   ├── assets/                # imagens usadas na documentação
+│   ├── src/
+│   │   ├── application/           # aplicação FastAPI
+│   │   │   ├── handles/           # rotas: pipeline.py e model.py
+│   │   │   └── schema.py          # modelo de entrada de POST /model/
+│   │   ├── controller/            # Dockerfile, Compose e dependências
+│   │   ├── etl/                   # camadas bronze, silver, gold e interface de carga
+│   │   ├── logs/                  # configuração centralizada de logs
+│   │   ├── ml/
+│   │   │   ├── train/             # treino e gerenciamento de modelos (CLI)
+│   │   │   ├── models/            # modelos salvos (.joblib)
+│   │   │   └── inference.py       # carga do modelo e previsão
+│   │   └── storage/               # camadas raw, cleaned, processed e test
+│   ├── tests/
+│   │   ├── unit/                  # leitura da camada raw
+│   │   ├── integration/           # integração entre as camadas do ETL
+│   │   └── functional/            # chamadas HTTP à API e ao modelo
+├── diagramas/                 # diagramas do relatório
+├── mascote.png
+├── relatorio.md / .pbix / .pdf
 └── .github/workflows/         # workflow build (integração contínua)
 ```
 
@@ -222,7 +225,7 @@ Clone o projeto e entre na pasta:
 
 ```bash
 git clone https://github.com/BrayanDevZN/AnaliseLeite.git
-cd AnaliseLeite
+cd AnaliseLeite/base
 ```
 
 Suba a API:
@@ -255,7 +258,7 @@ python -m pip install --upgrade pip
 pip install -r src/controller/requirements.txt
 ```
 
-Depois, na raiz do projeto, inicie a API:
+Depois, na pasta `base/`, inicie a API:
 
 ```bash
 python -m uvicorn src.application.main:app --host 0.0.0.0 --port 8000 --reload
