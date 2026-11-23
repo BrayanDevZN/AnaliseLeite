@@ -3,7 +3,7 @@ from base.src.ml.inference import ModelInference
 router_model = APIRouter(prefix="/model", tags=["model"])
 import pandas as pd
 instance = ModelInference(model="anl_v2")
-from src.application.schema import SchemaResponse
+from base.src.application.schema import SchemaResponse
 import io
 @router_model.post("/")
 async def response(data: SchemaResponse):
