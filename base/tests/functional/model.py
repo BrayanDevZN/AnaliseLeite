@@ -1,5 +1,5 @@
 from pathlib import Path 
-from src.ml.inference import ModelInference
+from base.src.ml.inference import ModelInference
 import pandas as pd
 
 
