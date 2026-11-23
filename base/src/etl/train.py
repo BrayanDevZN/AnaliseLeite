@@ -62,7 +62,7 @@ class Train(Silver):
 
                       logger.info(f"Merging files in {self.path}...")
                       
-                      df = self.read(layer="train", name=self.name)
+                      df = self.read(layer="train", name=files[0])
                       self.df = pd.concat([self.df, df], ignore_index=True)
                       del_path = self.path / files[0]
                       os.remove(del_path)

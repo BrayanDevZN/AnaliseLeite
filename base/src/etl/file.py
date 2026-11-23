@@ -1,6 +1,6 @@
 "Classe que le e salva os dataframes"
 import pandas as pd 
-from src.logs.log import logger
+from base.src.logs.log import logger
 import os
 from pathlib import Path
 from typing import Literal
