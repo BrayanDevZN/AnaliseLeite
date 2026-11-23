@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "analiseleite"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+[project.scripts]
+anl = "base.src.ml.train.model:main"
+
+[tool.setuptools]
+package-dir = { "base" = "." }
+packages = [
+    "base",
+    "base.src",
+    "base.src.logs",
+    "base.src.etl",
+    "base.src.ml",
+    "base.src.ml.train",
+]
