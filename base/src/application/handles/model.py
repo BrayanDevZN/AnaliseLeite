@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File
-from src.ml.inference import ModelInference
+from base.src.ml.inference import ModelInference
 router_model = APIRouter(prefix="/model", tags=["model"])
 import pandas as pd
 instance = ModelInference(model="anl_v2")
