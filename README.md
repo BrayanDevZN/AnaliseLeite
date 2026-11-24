@@ -6,7 +6,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/BrayanDevZN/AnaliseLeite/actions/workflows/pipeline.yaml"><img src="https://img.shields.io/github/actions/workflow/status/BrayanDevZN/AnaliseLeite/pipeline.yaml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=Build%20%26%20Tests" alt="Build and tests"></a>
+    <a href="https://github.com/BrayanDevZN/AnaliseLeite/actions/workflows/pipeline.yaml"><img src="https://github.com/BrayanDevZN/AnaliseLeite/actions/workflows/pipeline.yaml/badge.svg?branch=develop" alt="Build and tests" height="28"></a>
   </p>
 
   <p>
