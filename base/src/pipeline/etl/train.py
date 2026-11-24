@@ -25,10 +25,9 @@ class Train(Silver):
 
             for number, file in enumerate(files):
 
-                if "train_v" in file:
-           
-                    new_file = f"train_v{number}.parquet"
-                    os.rename(self.path / file, self.path / new_file)
+                
+                new_file = f"train_v{number}.parquet"
+                os.rename(self.path / file, self.path / new_file)
                 self.files.append(new_file)
 
 
