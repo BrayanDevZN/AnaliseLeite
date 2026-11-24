@@ -39,8 +39,8 @@ class TrainModel:
 
         result = await self.instance.run()
         
-        base = (BaseTemplate(model=self.model, futures=list(result["model"].feature_names_in_), threshold=result["trheshold"])
-                if isinstance(dict, result) else BaseTemplate(model=self.model, futures=list(result["model"].feature_names_in_)))
+        base = (BaseTemplate(name=self.model,model=result["model"], futures=list(result["model"].feature_names_in_), threshold=result["threshold"])
+                if isinstance(result, dict) else BaseTemplate(name=self.model,model=result, futures=list(result["model"].feature_names_in_)))
 
         base.save()
         

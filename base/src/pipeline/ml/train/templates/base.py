@@ -14,7 +14,7 @@ class BaseTemplate:
         self.threshold = threshold
         self.name = name
         self.model = model
-        self.path =  self.BASE_DIR / self.name
+        self.path =  self.BASE_DIR / "models" / self.name
         self.path.mkdir(exist_ok=True)
         
        

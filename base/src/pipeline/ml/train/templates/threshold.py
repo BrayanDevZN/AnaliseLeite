@@ -60,7 +60,7 @@ class Threshold:
         await self._data()
         await self._train()
 
-        return {"threshold": 0.5, "model": self.model}
+        return {"threshold": 0.05, "model": self.model}
 
 
 
