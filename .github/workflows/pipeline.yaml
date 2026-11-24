@@ -7,12 +7,15 @@ on:
             - main
             - develop
             - develop-v2
+            - develop-model
+
     pull_request:
         branches:
 
             - main
             - develop
             - develop-v2
+            - develop-model
 
 jobs:
 
