@@ -1,5 +1,5 @@
 __pycache__/
 ../.venv/
 *.log
-analiseleite.egg-info/
-src/.env
+*.egg-info/
+.env

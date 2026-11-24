@@ -1,5 +1,5 @@
 #valida se o usuario pode executar a rota ou não
-from base.model.src.logs.log import logger 
+from base.src.pipeline.logs.log import logger 
 from .config import API_KEY
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi import Request,  FastAPI

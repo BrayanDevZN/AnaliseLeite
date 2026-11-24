@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from base.model.src.application.handles.pipeline import router_pipeline
-from base.model.src.application.handles.model import router_model
-from base.model.src.application.midlleware import Midlleware
+from base.src.pipeline.application.handles.pipeline import router_pipeline
+from base.src.pipeline.application.handles.model import router_model
+from base.src.pipeline.application.midlleware import Midlleware
 
 app = FastAPI()
 

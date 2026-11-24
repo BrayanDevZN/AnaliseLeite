@@ -1,4 +1,4 @@
-from base.model.src.logs.log import logger
+from base.src.pipeline.logs.log import logger
 import pandas as pd
 from pathlib import Path
 from .file import DfFile
