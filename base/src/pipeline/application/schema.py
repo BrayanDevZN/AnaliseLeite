@@ -7,11 +7,11 @@ states = Literal[
 ]
 class SchemaResponse(BaseModel):
 
-    temperature: float 
-    state: states
-    data: str 
-    ccs: float 
-    cpp: float 
-    cidade: str 
-    tanque: str
+    temperature: float | None = None
+    state: states | None = None
+    data: str | None = None
+    ccs: float | None = None
+    cpp: float | None = None
+    cidade: str | None = None
+    tanque: str | None = None
 

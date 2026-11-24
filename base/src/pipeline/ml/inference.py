@@ -7,11 +7,14 @@ import os
 import json
 class ModelInference:
 
+    #Todas as colunas de entrada que o sistema conhece
+    COLUMNS = ["data", "temperatura", "ccs", "cpp", "tanque", "estado", "cidade"]
+
     def __init__(self, model:str|None=None)-> None:
 
         self.BASE_DIR = Path(__file__).resolve().parent / "models"
         self.model = model
-        self._get_model()
+        self._get_model_path()
         
         self._load()
         
@@ -73,38 +76,73 @@ class ModelInference:
 
         logger.info(f"Loading model {self.model}...")
 
+        self._get_config()
         self.model:RandomForestClassifier = joblib.load(self.path_model)
 
         logger.success(f"model {self.model} loaded with success")
 
-    def response(self, data:str, temperatura:float, ccs:float, cpp:float, 
-                 estado:str, cidade:str, tanque:str) -> str:
+
+    #Descobre quais colunas de entrada o modelo usa, a partir das features do config
+    def _used_columns(self) -> list[str]:
+
+        features = list(self.config.get("features") or self.model.feature_names_in_)
+        used = []
+
+        for column in self.COLUMNS:
+
+            if column in features or any(feature.startswith(f"{column}_") for feature in features):
+                used.append(column)
+
+        if "data" not in used and any(feature in features for feature in ("year", "month", "day")):
+            used.insert(0, "data")
+
+        return used
+
+
+    #Cria as colunas derivadas so das colunas que ficaram no schema
+    def _build_features(self, schema:pd.DataFrame) -> pd.DataFrame:
+
+        if "data" in schema.columns:
+
+            schema["data"] = pd.to_datetime(schema["data"])
+            schema["month"] = schema["data"].dt.month
+            schema["year"] = schema["data"].dt.year
+            schema["day"] = schema["data"].dt.dayofweek
+            schema = schema.drop(columns=["data"])
+
+        categorical = [column for column in ["tanque", "estado", "cidade"] if column in schema.columns]
+
+        if categorical:
+            schema = pd.get_dummies(columns=categorical, dtype=int, data=schema)
+
+        return schema.reindex(columns=self.model.feature_names_in_, fill_value=0)
+
+
+    def response(self, data:str|None=None, temperatura:float|None=None, ccs:float|None=None,
+                 cpp:float|None=None, estado:str|None=None, cidade:str|None=None,
+                 tanque:str|None=None) -> str:
 
         logger.info("Generating response...")
 
-        schema = pd.DataFrame(
-            [{
-                "data": data,
-                "temperatura": temperatura,
-                "ccs": ccs,
-                "cpp": cpp,
-                
-                "estado": estado,
-                "cidade": cidade,
-                "tanque": tanque
-            }]
-        )
+        values = {
+            "data": data,
+            "temperatura": temperatura,
+            "ccs": ccs,
+            "cpp": cpp,
+            "estado": estado,
+            "cidade": cidade,
+            "tanque": tanque
+        }
 
+        used = self._used_columns()
 
+        missing = [column for column in used if values[column] is None]
 
-        schema["data"] = pd.to_datetime(schema["data"])
-        schema["month"] = schema["data"].dt.month
-        schema["year"] = schema["data"].dt.year
-        schema["day"] = schema["data"].dt.dayofweek
-        schema = schema.drop(columns=["data"])
-        schema = pd.get_dummies(columns=["tanque", "estado", "cidade"], dtype=int, data=schema)
-        schema = schema.reindex(columns=self.model.feature_names_in_, fill_value=0)
-        
+        if missing:
+            raise ValueError(f"Expeted columns {', '.join(missing)}")
+
+        schema = pd.DataFrame([{column: values[column] for column in used}])
+        schema = self._build_features(schema)
 
         resp = self._predict(df=schema)
         logger.success("Response generate with success")
@@ -115,36 +153,29 @@ class ModelInference:
 
     def response_dataframe(self, df:pd.DataFrame) -> pd.DataFrame:
 
-        columns = ["data", "temperatura", "ccs", "cpp", "tanque", "estado", "cidade"]
+        used = self._used_columns()
         schema = df.copy()
-        schema = pd.get_dummies(columns=["tanque", "estado", "cidade"], dtype=int, data=schema)
-
-        for column in columns:
-
-            if not column in df.columns:
-                raise KeyError(f"Expeted column {column}")
-
         droped = []
 
-        for column in df.columns:
-            if not column in columns:
+        for column in list(schema.columns):
 
+            if not column in used:
+
+                schema = schema.drop(columns=column)
                 droped.append(column)
 
         if droped:
 
-            schema = schema.drop(columns=droped)
-            logger.info(f"Droped columns {" ,".join(droped)}")
+            logger.info(f"Droped columns {', '.join(droped)}")
+
+        missing = [column for column in used if column not in schema.columns]
+
+        if missing:
+            raise KeyError(f"Expeted columns {', '.join(missing)}")
 
         logger.info("Generating response for dataframe...")
 
-        schema["data"] = pd.to_datetime(schema["data"])
-        schema["month"] = schema["data"].dt.month
-        schema["year"] = schema["data"].dt.year
-        schema["day"] = schema["data"].dt.dayofweek
-        schema = schema.drop(columns=["data"])
-        schema = schema.reindex(columns=self.model.feature_names_in_, fill_value=0)
-
+        schema = self._build_features(schema)
 
         df = self._predict(df=schema)
         
