@@ -2,13 +2,14 @@ from fastapi import APIRouter, HTTPException, UploadFile, File
 from base.src.ml.inference import ModelInference
 router_model = APIRouter(prefix="/model", tags=["model"])
 import pandas as pd
-instance = ModelInference(model="anl_v2")
+
 from base.src.application.schema import SchemaResponse
 import io
 @router_model.post("/")
-async def response(data: SchemaResponse):
+async def response(data: SchemaResponse, model:str|None=None):
 
     try:
+        instance = ModelInference(model=model)
 
         response = instance.response(
             temperatura=data.temperature,
@@ -31,10 +32,11 @@ async def response(data: SchemaResponse):
 
 
 @router_model.post("/file")
-async def response_file(file: UploadFile = File(...)):
+async def response_file(file: UploadFile = File(...), model:str|None=None):
 
     try:
         content = await file.read()
+        instance = ModelInference(model=model)
 
         if file.filename.endswith(".parquet"):
             
@@ -59,5 +61,13 @@ async def response_file(file: UploadFile = File(...)):
         raise HTTPException(
             status_code=501, detail=str(error)
         )
+
+@router_model.get("/")
+async def response_models():
+    instance = ModelInference()
+
+    return instance.get_models()
+
+
 
     
