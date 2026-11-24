@@ -19,14 +19,18 @@ class ModelInference:
     def _get_model(self) -> None:
 
         self.models = [str(model).replace(".joblib", "")  for model in os.listdir(self.BASE_DIR)]
+        
         if self.model is None:
-            self.model = max(self.BASE_DIR.glob("*.joblib"), key=lambda p: p.stat().st_mtime)
+            self.model = str(max(self.BASE_DIR.glob("*.joblib"), key=lambda p: p.stat().st_mtime).stem)
+
+        self.model = self.model.replace(".joblib", "") if ".joblib" in self.model else self.model
+        
        
         if not self.model in self.models:
             logger.error(f"Not exist model {self.model}")
             raise
 
-        self.path = self.BASE_DIR / f"{self.model}{".joblib" if ".joblib" in self.model else ""}"
+        self.path = str(self.BASE_DIR / self.model) + ".joblib"
 
 
     def _load(self) -> None:

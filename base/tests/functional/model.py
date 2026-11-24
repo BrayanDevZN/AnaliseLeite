@@ -41,6 +41,7 @@ def test_model() -> None:
     models = ModelInference().get_models()
     instance = RunModel()
     models.append(None)
+    print(models)
     for model in models:
         instance.df(df=df, model=model)
         
