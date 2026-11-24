@@ -3,7 +3,9 @@ url = "http://0.0.0.0:8000"
 
 import requests
 from pathlib import Path
-response = requests.get(url=url + "/pipeline")
+from base.src.application.config import API_KEY
+header = {"Authorization": f"Bearer {API_KEY}"}
+response = requests.get(url=url + "/pipeline", headers=header)
 import pandas as pd
 if response.status_code != 201:
 
@@ -12,7 +14,7 @@ if response.status_code != 201:
 response = response.json()
 print(response)
 
-response = requests.get(url=url + "/model/")
+response = requests.get(url=url + "/model/", headers=header)
 
 if response.status_code != 200:
 
@@ -38,7 +40,7 @@ payload = {
 for model in models:
 
     with open(BASE_DIR, "rb") as f:
-        response = requests.post(url + "/model/file", params={"model": model}, files={"file": f})
+        response = requests.post(url + "/model/file", params={"model": model}, files={"file": f}, headers=header)
         if response.status_code >400:
 
             raise Exception(response.text)
@@ -48,7 +50,7 @@ for model in models:
     print(model)
     print(df)
 
-    response = requests.post(url + "/model/", params={"model": model}, json=payload)
+    response = requests.post(url + "/model/", params={"model": model}, json=payload, headers=header)
 
     if response.status_code >400:
 

@@ -18,6 +18,10 @@ jobs:
     build:
 
         runs-on: ubuntu-latest
+        environment: develop_pl
+
+        env:
+          ML_KEY: ${{secrets.ML_KEY}}
 
        
 

@@ -4,6 +4,8 @@ services:
         context: ..
         dockerfile: base/Dockerfile
       
+      container_name: pipeline
+      
       ports:
         - "8000:8000"
     
