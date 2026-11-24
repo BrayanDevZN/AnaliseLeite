@@ -1,0 +1,47 @@
+name: backend
+
+
+on:
+    push:
+        branches:
+            - main
+            - develop
+            - develop-v2
+            - develop-model
+            - develop-system
+
+    pull_request:
+        branches:
+            - main
+            - develop
+            - develop-v2
+            - develop-model
+            - develop-system
+
+jobs:
+
+    build:
+
+        runs-on: ubuntu-latest
+
+        defaults:
+            run:
+                working-directory: base
+
+        steps:
+
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-go@v5
+              with:
+                  go-version-file: base/go.mod
+                  cache: false
+
+            - name: check format
+              run: test -z "$(gofmt -l .)"
+
+            - name: analyze code
+              run: go vet ./...
+
+            - name: execute unit
+              run: go test -race -coverpkg=./src/backend ./tests/unit/
