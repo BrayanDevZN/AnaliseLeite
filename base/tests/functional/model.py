@@ -1,5 +1,5 @@
 from pathlib import Path 
-from base.src.ml.inference import ModelInference
+from base.src.pipeline.ml.inference import ModelInference
 import pandas as pd
 from sklearn.metrics import recall_score, precision_score, f1_score, confusion_matrix
 
@@ -45,7 +45,7 @@ class RunModel:
 def test_model() -> None:
 
     
-    BASE_DIR = Path(__file__).parent.parent.parent / "src/storage/test/analise_leite_teste.parquet"
+    BASE_DIR = Path(__file__).parent.parent.parent / "src/pipeline/storage/test/analise_leite_teste.parquet"
 
     df = pd.read_parquet(BASE_DIR)
     models = ModelInference().get_models()

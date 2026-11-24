@@ -15,15 +15,16 @@ dependencies = [
 ]
 
 [project.scripts]
-model = "base.src.ml.train.model:main"
+model = "base.src.pipeline.ml.train.model:main"
 
 [tool.setuptools]
 package-dir = { "base" = "." }
 packages = [
     "base",
     "base.src",
-    "base.src.logs",
-    "base.src.etl",
-    "base.src.ml",
-    "base.src.ml.train",
+    "base.src.pipeline",
+    "base.src.pipeline.logs",
+    "base.src.pipeline.etl",
+    "base.src.pipeline.ml",
+    "base.src.pipeline.ml.train",
 ]

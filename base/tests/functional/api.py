@@ -3,7 +3,7 @@ url = "http://0.0.0.0:8000"
 
 import requests
 from pathlib import Path
-from base.src.application.config import API_KEY
+from base.src.pipeline.application.config import API_KEY
 header = {"Authorization": f"Bearer {API_KEY}"}
 response = requests.get(url=url + "/pipeline", headers=header)
 import pandas as pd
@@ -23,7 +23,7 @@ if response.status_code != 200:
 models = response.json()
 print(models)
 
-BASE_DIR = Path(__file__).resolve().parent.parent.parent / "src/storage/test/analise_leite_teste.parquet"
+BASE_DIR = Path(__file__).resolve().parent.parent.parent / "src/pipeline/storage/test/analise_leite_teste.parquet"
 
 row = pd.read_parquet(BASE_DIR).iloc[0]
 
