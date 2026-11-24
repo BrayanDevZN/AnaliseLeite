@@ -28,7 +28,7 @@ def main() -> None:
                 logger.warning(f"model will be {name} recreated")
 
         else:
-            name = f"anl_{len(models) + 1}"
+            name = f"anl_v{len(models) + 1}"
 
         instance = TrainModel(model_name=name)
         asyncio.run(instance.run())

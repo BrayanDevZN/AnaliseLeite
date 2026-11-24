@@ -9,75 +9,53 @@ class Train(Silver):
        
         self.path = self.BASE_DIR / "train"
         self.path.mkdir(exist_ok=True)
-        self.name = "train_v0.parquet"
+       
+
+    #Atualiza o nome dos arquivos
+    def _get_names(self) -> None:
+
+         _created = lambda path: getattr(os.stat(path), "st_birthtime",os.stat(path))
+         files = sorted(os.listdir(self.path), key=lambda f: _created(self.path / f))
+        
+
+         
+         self.files = []
+
+         if files:
+
+            for number, file in enumerate(files):
+
+                
+                new_file = f"train_v{number}.parquet"
+                os.rename(self.path / file, self.path / new_file)
+                self.files.append(new_file)
 
 
-   
-
+              
+         
     #Pega os arquivos de train e junta com o dataframe
     def _concat(self) -> None:
 
-            files = os.listdir(self.path)
+         if self.files:
 
+            logger.info("Merging datasets...")
 
+            for file in self.files:
 
-            if files and len(files) >1:
-
-                logger.info(f"Merging files in {self.path}...")
-
-                
-           
-                count = 0
-                
-            
-                for file in self.files:
-                   
-                    df = self.read(layer="train", name=file)
+                df = self.read(layer="train", name=file)
+                if not self.df.equals(df):
 
                     self.df = pd.concat([self.df, df], ignore_index=True)
 
-                    if "train_v" in file:
+            logger.success("Datasets mergeded with success")
 
-                        name = self.name.replace(".parquet", "") if ".parquet" in self.name else self.name 
-                        count += int(name[-1])
 
-                    self.name = f"train_v{count}.parquet"
-
-                    del_path = self.path / file
-                    os.remove(del_path)
-                    logger.info(f"Removed path {del_path}!!")
-
-            
-
-                
-
-                logger.success("Files merge with success")
-
-            elif files and len(files) == 1:
-
-                 if "train_v" in files[0]:
-                      self.df = self.read(layer="train", name=self.path / files[0])
-                      self.name = files[0]
-                 else:
-
-                      logger.info(f"Merging files in {self.path}...")
-                      
-                      df = self.read(layer="train", name=files[0])
-                      self.df = pd.concat([self.df, df], ignore_index=True)
-                      del_path = self.path / files[0]
-                      os.remove(del_path)
-                      logger.info(f"Removed path {del_path}!!")
-                      logger.success("Files merge with success")
-                 
-
-            if not os.path.exists(self.path / self.name):
-
-                self.save(name=self.name, layer="train", df=self.df)
-
+        
 
     #Chama get silver e depois _concat
     def get_train(self) ->pd.DataFrame:
          self.get_silver()
+         self._get_names()
          self._concat()
          return self.df
 
