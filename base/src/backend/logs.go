@@ -45,9 +45,20 @@ func NewLogger() *Logger {
 // As cores so sao usadas quando out e o terminal e a variavel NO_COLOR nao esta definida.
 func NewLoggerWriter(out io.Writer) *Logger {
 	_, noColor := os.LookupEnv("NO_COLOR")
-	_, isFile := out.(*os.File)
 
-	return &Logger{out: out, color: isFile && !noColor}
+	return &Logger{out: out, color: !noColor && isTerminal(out)}
+}
+
+// isTerminal diz se out e o terminal (e nao um arquivo, pipe ou buffer).
+func isTerminal(out io.Writer) bool {
+	file, ok := out.(*os.File)
+	if !ok {
+		return false
+	}
+
+	info, err := file.Stat()
+
+	return err == nil && info.Mode()&os.ModeCharDevice != 0
 }
 
 // log monta e escreve uma linha: [NIVEL] => data/hora | mensagem
