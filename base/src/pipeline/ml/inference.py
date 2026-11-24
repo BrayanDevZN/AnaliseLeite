@@ -50,11 +50,11 @@ class ModelInference:
             if self.config["threshold"] is not None:
 
                 prob = self.model.predict_proba(df)[0, 1]
-                return "aprovado" if prob >= self.config["threshold"] else "reprovado"
+                return "reprovado" if prob >= self.config["threshold"] else "aprovado"
 
             else:
 
-                return "aprovado" if self.model.predict(df).item() == 0 else "repovado"
+                return "aprovado" if self.model.predict(df).item() == 0 else "reprovado"
 
 
         if self.config["threshold"] is not None:
@@ -66,7 +66,7 @@ class ModelInference:
 
             response = self.model.predict(df)
 
-        df["predict"] = pd.Series(response).map({1: "repovado", 0: "aprovado"})
+        df["predict"] = pd.Series(response).map({1: "reprovado", 0: "aprovado"})
         return df
 
 
