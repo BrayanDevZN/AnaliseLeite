@@ -1,64 +1,58 @@
 package auth
 
 import (
-	"crypto/pbkdf2"
-	"crypto/rand"
-	"crypto/sha256"
-	"crypto/subtle"
-	"encoding/base64"
 	"errors"
 	"fmt"
-	"strconv"
-	"strings"
+
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/BrayanDevZN/AnaliseLeite/base/src/backend"
 )
 
 const (
-	// formato do hash guardado: pbkdf2-sha256$iteracoes$salt$hash
-	hashScheme = "pbkdf2-sha256"
+	// DefaultCost e o custo do bcrypt (cada +1 dobra o tempo de calculo).
+	DefaultCost = 12
 
-	// DefaultIterations e o numero de iteracoes do PBKDF2-HMAC-SHA256 recomendado pela OWASP.
-	DefaultIterations = 600_000
+	// limite para nao aceitar um hash forjado que force um calculo enorme
+	maxCost = 15
 
-	// limite para nao aceitar um hash que force um calculo enorme
-	maxIterations = 10_000_000
-
-	saltSize = 16
-	keySize  = 32
+	// o bcrypt so usa os 72 primeiros bytes da senha
+	maxPasswordLength = 72
 )
 
 var (
-	ErrEmptyPassword = errors.New("password must not be empty")
-	ErrInvalidHash   = errors.New("invalid password hash format")
+	ErrEmptyPassword   = errors.New("password must not be empty")
+	ErrPasswordTooLong = fmt.Errorf("password must have at most %d bytes", maxPasswordLength)
+	ErrInvalidHash     = errors.New("invalid password hash format")
 )
 
-// Hasher gera e confere hashes de senha.
+// Hasher gera e confere hashes de senha com bcrypt.
 type Hasher struct {
-	logger     *backend.Logger
-	iterations int
+	logger *backend.Logger
+	cost   int
 }
 
-// NewHasher cria um Hasher com o numero de iteracoes padrao.
+// NewHasher cria um Hasher com o custo padrao.
 // Se logger for nil, os logs vao para o terminal.
 func NewHasher(logger *backend.Logger) *Hasher {
-	return NewHasherWithIterations(logger, DefaultIterations)
+	return NewHasherWithCost(logger, DefaultCost)
 }
 
-// NewHasherWithIterations cria um Hasher com um numero de iteracoes escolhido (util em testes).
-func NewHasherWithIterations(logger *backend.Logger, iterations int) *Hasher {
+// NewHasherWithCost cria um Hasher com um custo escolhido (util em testes).
+// Um custo fora do intervalo aceito (de bcrypt.MinCost ate 15) usa o padrao.
+func NewHasherWithCost(logger *backend.Logger, cost int) *Hasher {
 	if logger == nil {
 		logger = backend.NewLogger()
 	}
 
-	if iterations < 1 {
-		iterations = DefaultIterations
+	if cost < bcrypt.MinCost || cost > maxCost {
+		cost = DefaultCost
 	}
 
-	return &Hasher{logger: logger, iterations: iterations}
+	return &Hasher{logger: logger, cost: cost}
 }
 
-// Hash gera o hash de uma senha, com um salt aleatorio.
+// Hash gera o hash bcrypt de uma senha, com um salt aleatorio.
 // A senha e o hash nunca vao para os logs.
 func (h *Hasher) Hash(password string) (string, error) {
 	h.logger.Info("Generating password hash...")
@@ -69,15 +63,13 @@ func (h *Hasher) Hash(password string) (string, error) {
 		return "", ErrEmptyPassword
 	}
 
-	salt := make([]byte, saltSize)
+	if len(password) > maxPasswordLength {
+		h.logger.Error("Password is too long")
 
-	if _, err := rand.Read(salt); err != nil {
-		h.logger.Error("Could not generate salt: %v", err)
-
-		return "", fmt.Errorf("generate salt: %w", err)
+		return "", ErrPasswordTooLong
 	}
 
-	key, err := pbkdf2.Key(sha256.New, password, salt, h.iterations, keySize)
+	hashed, err := bcrypt.GenerateFromPassword([]byte(password), h.cost)
 
 	if err != nil {
 		h.logger.Error("Could not generate hash: %v", err)
@@ -85,16 +77,9 @@ func (h *Hasher) Hash(password string) (string, error) {
 		return "", fmt.Errorf("generate hash: %w", err)
 	}
 
-	encoded := strings.Join([]string{
-		hashScheme,
-		strconv.Itoa(h.iterations),
-		base64.RawStdEncoding.EncodeToString(salt),
-		base64.RawStdEncoding.EncodeToString(key),
-	}, "$")
-
 	h.logger.Success("Password hash generated with success")
 
-	return encoded, nil
+	return string(hashed), nil
 }
 
 // Verify confere se a senha corresponde ao hash.
@@ -102,58 +87,38 @@ func (h *Hasher) Hash(password string) (string, error) {
 func (h *Hasher) Verify(password string, encoded string) (bool, error) {
 	h.logger.Info("Verifying password...")
 
-	iterations, salt, key, err := parseHash(encoded)
+	cost, err := bcrypt.Cost([]byte(encoded))
 
-	if err != nil {
+	if err != nil || cost > maxCost {
 		h.logger.Error("Invalid password hash format")
 
-		return false, err
+		return false, ErrInvalidHash
 	}
 
-	derived, err := pbkdf2.Key(sha256.New, password, salt, iterations, keySize)
-
-	if err != nil {
-		h.logger.Error("Could not verify password: %v", err)
-
-		return false, fmt.Errorf("verify password: %w", err)
-	}
-
-	if subtle.ConstantTimeCompare(derived, key) != 1 {
+	// o bcrypt ignora o que passa de 72 bytes; como o Hash nunca aceita uma senha assim,
+	// uma senha maior que isso nao pode corresponder a nenhum hash gerado aqui
+	if len(password) > maxPasswordLength {
 		h.logger.Warning("Password does not match")
 
 		return false, nil
 	}
 
-	h.logger.Success("Password verified with success")
+	err = bcrypt.CompareHashAndPassword([]byte(encoded), []byte(password))
 
-	return true, nil
-}
+	switch {
+	case err == nil:
+		h.logger.Success("Password verified with success")
 
-// parseHash separa o hash guardado em iteracoes, salt e chave.
-func parseHash(encoded string) (int, []byte, []byte, error) {
-	parts := strings.Split(encoded, "$")
+		return true, nil
 
-	if len(parts) != 4 || parts[0] != hashScheme {
-		return 0, nil, nil, ErrInvalidHash
+	case errors.Is(err, bcrypt.ErrMismatchedHashAndPassword):
+		h.logger.Warning("Password does not match")
+
+		return false, nil
+
+	default:
+		h.logger.Error("Invalid password hash format")
+
+		return false, ErrInvalidHash
 	}
-
-	iterations, err := strconv.Atoi(parts[1])
-
-	if err != nil || iterations < 1 || iterations > maxIterations {
-		return 0, nil, nil, ErrInvalidHash
-	}
-
-	salt, err := base64.RawStdEncoding.DecodeString(parts[2])
-
-	if err != nil || len(salt) != saltSize {
-		return 0, nil, nil, ErrInvalidHash
-	}
-
-	key, err := base64.RawStdEncoding.DecodeString(parts[3])
-
-	if err != nil || len(key) != keySize {
-		return 0, nil, nil, ErrInvalidHash
-	}
-
-	return iterations, salt, key, nil
 }

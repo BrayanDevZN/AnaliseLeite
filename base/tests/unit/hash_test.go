@@ -2,6 +2,7 @@ package unit
 
 import (
 	"errors"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -10,13 +11,16 @@ import (
 	"github.com/BrayanDevZN/AnaliseLeite/base/src/backend/auth"
 )
 
-// poucas iteracoes, para os testes nao ficarem lentos
-const testIterations = 1000
+// o menor custo do bcrypt, para os testes nao ficarem lentos
+const testCost = 4
+
+// formato de um hash bcrypt com custo 04: $2a$04$ + 22 caracteres de salt + 31 de hash
+var bcryptFormat = regexp.MustCompile(`^\$2[aby]\$04\$[./A-Za-z0-9]{53}$`)
 
 func newTestHasher() (*auth.Hasher, func() string) {
 	logger, buffer := newTestLogger()
 
-	return auth.NewHasherWithIterations(logger, testIterations), buffer.String
+	return auth.NewHasherWithCost(logger, testCost), buffer.String
 }
 
 func TestHashFormat(t *testing.T) {
@@ -28,26 +32,16 @@ func TestHashFormat(t *testing.T) {
 		t.Fatalf("nao esperava erro: %v", err)
 	}
 
-	parts := strings.Split(encoded, "$")
-
-	if len(parts) != 4 {
-		t.Fatalf("esperava 4 partes separadas por $, veio %d: %q", len(parts), encoded)
+	if len(encoded) != 60 {
+		t.Errorf("um hash bcrypt tem 60 caracteres, veio %d: %q", len(encoded), encoded)
 	}
 
-	if parts[0] != "pbkdf2-sha256" {
-		t.Errorf("algoritmo: esperava pbkdf2-sha256, veio %q", parts[0])
-	}
-
-	if parts[1] != strconv.Itoa(testIterations) {
-		t.Errorf("iteracoes: esperava %d, veio %q", testIterations, parts[1])
-	}
-
-	if parts[2] == "" || parts[3] == "" {
-		t.Errorf("salt e hash nao deveriam estar vazios: %q", encoded)
+	if !bcryptFormat.MatchString(encoded) {
+		t.Fatalf("hash fora do formato bcrypt com custo %d: %q", testCost, encoded)
 	}
 }
 
-func TestHashUsesDefaultIterations(t *testing.T) {
+func TestHashUsesDefaultCost(t *testing.T) {
 	logger, _ := newTestLogger()
 
 	encoded, err := auth.NewHasher(logger).Hash("senha")
@@ -56,22 +50,31 @@ func TestHashUsesDefaultIterations(t *testing.T) {
 		t.Fatalf("nao esperava erro: %v", err)
 	}
 
-	if !strings.Contains(encoded, "$"+strconv.Itoa(auth.DefaultIterations)+"$") {
-		t.Fatalf("esperava %d iteracoes: %q", auth.DefaultIterations, encoded)
+	if !strings.Contains(encoded, "$"+strconv.Itoa(auth.DefaultCost)+"$") {
+		t.Fatalf("esperava o custo %d: %q", auth.DefaultCost, encoded)
 	}
 }
 
-func TestHashNonPositiveIterationsFallBackToDefault(t *testing.T) {
+func TestHashInvalidCostFallsBackToDefault(t *testing.T) {
 	logger, _ := newTestLogger()
 
-	encoded, err := auth.NewHasherWithIterations(logger, 0).Hash("senha")
+	// um custo abaixo e outro acima do intervalo (cada hash no custo padrao leva alguns segundos)
+	for _, cost := range []int{3, 99} {
+		encoded, err := auth.NewHasherWithCost(logger, cost).Hash("senha")
 
-	if err != nil {
-		t.Fatalf("nao esperava erro: %v", err)
+		if err != nil {
+			t.Fatalf("custo %d: nao esperava erro: %v", cost, err)
+		}
+
+		if !strings.Contains(encoded, "$"+strconv.Itoa(auth.DefaultCost)+"$") {
+			t.Errorf("custo %d fora do intervalo deveria usar o padrao: %q", cost, encoded)
+		}
 	}
+}
 
-	if !strings.Contains(encoded, "$"+strconv.Itoa(auth.DefaultIterations)+"$") {
-		t.Fatalf("0 iteracoes deveria usar o padrao: %q", encoded)
+func TestHashDefaultCostIsNotWeak(t *testing.T) {
+	if auth.DefaultCost < 10 {
+		t.Fatalf("o custo padrao do bcrypt nao deveria ser menor que 10, veio %d", auth.DefaultCost)
 	}
 }
 
@@ -110,14 +113,14 @@ func TestHashEmptyPassword(t *testing.T) {
 	}
 }
 
-func TestHashAcceptsUnicodeAndLongPasswords(t *testing.T) {
+func TestHashAcceptsUnicodeAndSymbolPasswords(t *testing.T) {
 	hasher, _ := newTestHasher()
 
 	for name, password := range map[string]string{
 		"unicode":  "sénha-çom-açentos-日本語-🔐",
-		"longa":    strings.Repeat("a", 5000),
 		"espacos":  "  com espacos  ",
 		"simbolos": `!@#$%^&*()_+-=[]{}|;':",./<>?`,
+		"um byte":  "a",
 	} {
 		encoded, err := hasher.Hash(password)
 
@@ -128,6 +131,51 @@ func TestHashAcceptsUnicodeAndLongPasswords(t *testing.T) {
 		if ok, err := hasher.Verify(password, encoded); err != nil || !ok {
 			t.Errorf("%s: a senha deveria conferir (ok=%v, err=%v)", name, ok, err)
 		}
+	}
+}
+
+func TestHashPasswordLengthLimit(t *testing.T) {
+	hasher, _ := newTestHasher()
+
+	atLimit := strings.Repeat("a", 72)
+
+	encoded, err := hasher.Hash(atLimit)
+
+	if err != nil {
+		t.Fatalf("72 bytes deveriam ser aceitos: %v", err)
+	}
+
+	if ok, _ := hasher.Verify(atLimit, encoded); !ok {
+		t.Fatal("a senha de 72 bytes deveria conferir")
+	}
+
+	for name, password := range map[string]string{
+		"73 bytes":                   strings.Repeat("a", 73),
+		"muito longa":                strings.Repeat("a", 5000),
+		"emojis (bytes, nao letras)": strings.Repeat("🔐", 19), // 19 x 4 bytes = 76
+	} {
+		hashed, err := hasher.Hash(password)
+
+		if !errors.Is(err, auth.ErrPasswordTooLong) {
+			t.Errorf("%s: esperava ErrPasswordTooLong, veio %v", name, err)
+		}
+
+		if hashed != "" {
+			t.Errorf("%s: com erro, o hash deveria ser vazio", name)
+		}
+	}
+}
+
+func TestVerifyDoesNotIgnoreBytesAfter72(t *testing.T) {
+	hasher, _ := newTestHasher()
+
+	encoded, _ := hasher.Hash(strings.Repeat("a", 72))
+
+	// o bcrypt puro ignoraria o "b" e diria que confere
+	ok, err := hasher.Verify(strings.Repeat("a", 72)+"b", encoded)
+
+	if err != nil || ok {
+		t.Fatalf("uma senha maior que 72 bytes nao deveria conferir (ok=%v err=%v)", ok, err)
 	}
 }
 
@@ -161,13 +209,13 @@ func TestVerifyWrongPassword(t *testing.T) {
 	}
 }
 
-func TestVerifyUsesIterationsStoredInTheHash(t *testing.T) {
+func TestVerifyUsesCostStoredInTheHash(t *testing.T) {
 	logger, _ := newTestLogger()
 
-	encoded, _ := auth.NewHasherWithIterations(logger, 1000).Hash("senha")
+	encoded, _ := auth.NewHasherWithCost(logger, 4).Hash("senha")
 
-	// outro Hasher, com outro numero de iteracoes, ainda confere o hash antigo
-	ok, err := auth.NewHasherWithIterations(logger, 2000).Verify("senha", encoded)
+	// outro Hasher, com outro custo, ainda confere o hash antigo
+	ok, err := auth.NewHasherWithCost(logger, 5).Verify("senha", encoded)
 
 	if err != nil || !ok {
 		t.Fatalf("esperava true, veio ok=%v err=%v", ok, err)
@@ -180,11 +228,8 @@ func TestVerifyHashFromAnotherPasswordIsRejected(t *testing.T) {
 	hashA, _ := hasher.Hash("a")
 	hashB, _ := hasher.Hash("b")
 
-	partsA := strings.Split(hashA, "$")
-	partsB := strings.Split(hashB, "$")
-
-	// salt de A com a chave de B
-	mixed := strings.Join([]string{partsA[0], partsA[1], partsA[2], partsB[3]}, "$")
+	// o prefixo ($2a$04$) e os 22 caracteres de salt de A, com o resto do hash de B
+	mixed := hashA[:29] + hashB[29:]
 
 	if ok, _ := hasher.Verify("a", mixed); ok {
 		t.Fatal("um hash adulterado nao deveria conferir")
@@ -199,23 +244,20 @@ func TestVerifyInvalidFormats(t *testing.T) {
 	hasher, _ := newTestHasher()
 
 	valid, _ := hasher.Hash("senha")
-	parts := strings.Split(valid, "$")
 
 	cases := map[string]string{
-		"vazio":              "",
-		"texto solto":        "isso-nao-e-um-hash",
-		"senha em texto":     "senha",
-		"poucas partes":      "pbkdf2-sha256$1000$abc",
-		"partes demais":      valid + "$extra",
-		"algoritmo errado":   "bcrypt$" + strings.Join(parts[1:], "$"),
-		"iteracoes texto":    strings.Join([]string{parts[0], "muitas", parts[2], parts[3]}, "$"),
-		"iteracoes zero":     strings.Join([]string{parts[0], "0", parts[2], parts[3]}, "$"),
-		"iteracoes negativa": strings.Join([]string{parts[0], "-5", parts[2], parts[3]}, "$"),
-		"iteracoes enormes":  strings.Join([]string{parts[0], "99999999", parts[2], parts[3]}, "$"),
-		"salt invalido":      strings.Join([]string{parts[0], parts[1], "!!!", parts[3]}, "$"),
-		"salt curto":         strings.Join([]string{parts[0], parts[1], "YWJj", parts[3]}, "$"),
-		"chave invalida":     strings.Join([]string{parts[0], parts[1], parts[2], "!!!"}, "$"),
-		"chave curta":        strings.Join([]string{parts[0], parts[1], parts[2], "YWJj"}, "$"),
+		"vazio":                 "",
+		"texto solto":           "isso-nao-e-um-hash",
+		"senha em texto":        "senha",
+		"muito curto":           "$2a$04$abc",
+		"hash cortado":          valid[:40],
+		"versao desconhecida":   "$9z$" + valid[4:],
+		"sem prefixo":           valid[1:],
+		"custo ilegivel":        "$2a$xx$" + valid[7:],
+		"custo zero":            "$2a$00$" + valid[7:],
+		"custo acima do limite": "$2a$16$" + valid[7:],
+		"custo gigante":         "$2a$31$" + valid[7:],
+		"salt com lixo":         valid[:10] + "!!!!" + valid[14:],
 	}
 
 	for name, encoded := range cases {
@@ -249,15 +291,17 @@ func TestHashLogsGenerationWithoutLeakingSecrets(t *testing.T) {
 	}
 }
 
-func TestHashLogsAnErrorForEmptyPassword(t *testing.T) {
-	hasher, logs := newTestHasher()
+func TestHashLogsAnErrorForEmptyAndLongPasswords(t *testing.T) {
+	for name, password := range map[string]string{"vazia": "", "longa": strings.Repeat("a", 100)} {
+		hasher, logs := newTestHasher()
 
-	hasher.Hash("")
+		hasher.Hash(password)
 
-	output := logs()
+		output := logs()
 
-	if !strings.Contains(output, "[ERROR] => ") || strings.Contains(output, "[SUCCESS]") {
-		t.Fatalf("esperava um log de erro e nenhum de sucesso: %q", output)
+		if !strings.Contains(output, "[ERROR] => ") || strings.Contains(output, "[SUCCESS]") {
+			t.Errorf("%s: esperava um log de erro e nenhum de sucesso: %q", name, output)
+		}
 	}
 }
 
@@ -286,7 +330,7 @@ func TestVerifyLogs(t *testing.T) {
 }
 
 func TestNewHasherWithNilLoggerDoesNotPanic(t *testing.T) {
-	hasher := auth.NewHasherWithIterations(nil, testIterations)
+	hasher := auth.NewHasherWithCost(nil, testCost)
 
 	encoded, err := hasher.Hash("senha")
 

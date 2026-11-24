@@ -35,7 +35,7 @@ jobs:
             - uses: actions/setup-go@v5
               with:
                   go-version-file: base/go.mod
-                  cache: false
+                  cache-dependency-path: base/go.sum
 
             - name: check format
               run: test -z "$(gofmt -l .)"
