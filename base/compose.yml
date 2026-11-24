@@ -1,0 +1,12 @@
+services:
+    pipeline:
+      build:
+        context: ..
+        dockerfile: base/Dockerfile
+      environment:
+        - ML_KEY=${ML_KEY}
+      container_name: pipeline
+      
+      ports:
+        - "8000:8000"
+    

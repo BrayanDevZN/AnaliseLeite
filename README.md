@@ -189,27 +189,31 @@ Os principais indicadores de qualidade são:
 ```text
 AnaliseLeite/
 ├── base/
-│   ├── assets/                # imagens usadas na documentação
+│   ├── assets/                    # imagens usadas na documentação
 │   ├── src/
 │   │   ├── application/           # aplicação FastAPI
 │   │   │   ├── handles/           # rotas: pipeline.py e model.py
 │   │   │   └── schema.py          # modelo de entrada de POST /model/
-│   │   ├── controller/            # Dockerfile, Compose e dependências
-│   │   ├── etl/                   # camadas bronze, silver, gold e interface de carga
+│   │   ├── etl/                   # camadas bronze, silver, gold, train e interface de carga
 │   │   ├── logs/                  # configuração centralizada de logs
 │   │   ├── ml/
 │   │   │   ├── train/             # treino e gerenciamento de modelos (CLI)
 │   │   │   ├── models/            # modelos salvos (.joblib)
 │   │   │   └── inference.py       # carga do modelo e previsão
-│   │   └── storage/               # camadas raw, cleaned, processed e test
+│   │   └── storage/               # camadas raw, cleaned, processed, train e test
 │   ├── tests/
 │   │   ├── unit/                  # leitura da camada raw
 │   │   ├── integration/           # integração entre as camadas do ETL
 │   │   └── functional/            # chamadas HTTP à API e ao modelo
-├── diagramas/                 # diagramas do relatório
+│   ├── Dockerfile                 # imagem da API
+│   ├── compose.yml                # sobe a API com Docker Compose
+│   └── requirements.txt           # dependências do projeto
+├── diagramas/                     # diagramas do relatório
+├── misc/                          # banner, levantamento de requisitos e leiame
+├── .github/workflows/             # workflow build (integração contínua)
 ├── mascote.png
-├── relatorio.md / .pbix / .pdf
-└── .github/workflows/         # workflow build (integração contínua)
+├── rastreamento.md
+└── relatorio.md / .pbix / .pdf
 ```
 
 ## Como executar

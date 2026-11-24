@@ -1,9 +1,0 @@
-services:
-    pipeline:
-      build:
-        context: ../..
-        dockerfile: src/controller/Dockerfile
-      
-      ports:
-        - "8000:8000"
-    
