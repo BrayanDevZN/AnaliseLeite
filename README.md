@@ -93,7 +93,7 @@ flowchart LR
 ### Fluxo de uma requisição
 
 1. O cliente envia a requisição com o header `Authorization: Bearer <ML_KEY>`. Sem o header, a resposta é `401`; com um header mal formado, `403`; com a chave errada, `401`.
-2. Para `GET /pipeline/`, o cliente pode passar `?layer=raw|cleaned|processed` (padrão: `processed`).
+2. Para `GET /pipeline/`, o cliente pode passar `?layer=raw|processed` (padrão: `processed`). A camada `cleaned` ainda não é serializável em JSON; veja a observação em [Uso da API](#get-pipeline).
 3. `LoadData(layer)` executa o método da camada pedida.
 4. Cada camada reaproveita o arquivo já salvo quando ele existe e, se não existir, gera a partir da camada anterior.
 5. O resultado é convertido em JSON: uma lista de registros, ou um objeto com as tabelas `fazendas` e `coletas` na camada `raw`.
@@ -359,44 +359,86 @@ python -m uvicorn base.src.pipeline.application.main:app --host 0.0.0.0 --port 8
 
 ## Uso da API
 
-Os exemplos usam a variável `KEY` com a mesma chave do `ML_KEY`:
+### Resumo das rotas
+
+| Rota | Método | Para que serve | Sucesso |
+|---|---|---|---|
+| `/health` | `GET` | Verificar se o serviço está de pé | `200` |
+| `/pipeline/` | `GET` | Consultar os dados de uma camada do ETL | `201` |
+| `/model/` | `GET` | Listar os modelos disponíveis | `200` |
+| `/model/` | `POST` | Prever o resultado do exame de **uma** coleta | `200` |
+| `/model/file` | `POST` | Prever o resultado de **várias** coletas de um arquivo | `200` |
+
+Os exemplos usam duas variáveis de shell. Ajuste os valores para o seu ambiente:
 
 ```bash
-KEY="uma-chave-secreta"
+KEY="uma-chave-secreta"        # o mesmo valor de ML_KEY
+URL="http://localhost:8000"
 ```
+
+### Passo a passo: da chave até uma previsão
+
+1. **Suba o serviço** (veja [Como executar](#como-executar)) com a `ML_KEY` definida.
+2. **Confira que ele responde:**
+   ```bash
+   curl -H "Authorization: Bearer $KEY" $URL/health
+   # {"status":true}
+   ```
+3. **Veja quais modelos existem:**
+   ```bash
+   curl -H "Authorization: Bearer $KEY" $URL/model/
+   # ["anl_v1","anl_v2","anl_threshold_v2","anl_threshold","anl_v3"]
+   ```
+4. **Preveja uma coleta**, escolhendo um dos modelos da lista:
+   ```bash
+   curl -X POST "$URL/model/?model=anl_threshold_v2" \
+     -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
+     -d '{"temperature": 4.2, "state": "MG", "data": "2026-03-02", "ccs": 480, "cpp": 250, "cidade": "Betim", "tanque": "TC01"}'
+   # "aprovado"
+   ```
+5. **Ou preveja um arquivo inteiro:**
+   ```bash
+   curl -X POST "$URL/model/file?model=anl_threshold_v2" \
+     -H "Authorization: Bearer $KEY" \
+     -F "file=@base/src/pipeline/storage/test/analise_leite_teste.parquet"
+   ```
 
 ### Autenticação
 
-Toda requisição deve enviar o header `Authorization: Bearer <chave>`.
+Toda requisição deve enviar o header `Authorization: Bearer <chave>`, inclusive `/health` e `/docs`.
 
 | Situação | Resposta |
 |---|---|
-| Header ausente | `401` — `Expeted Authorization header` |
-| Header sem o formato `Bearer <chave>` | `403` — `Invalid Authorization header` |
-| Chave incorreta | `401` — `Invalid credential` |
+| Header ausente | `401` — `{"detail":"Expeted Authorization header"}` |
+| Header sem o formato `Bearer <chave>` | `403` — `{"detail":"Invalid Authorization header"}` |
+| Chave incorreta | `401` — `{"detail":"Invalid credential"}` |
 
 ### `GET /health`
 
-Verifica se o serviço está de pé. Responde `{"status": true}`.
+Verifica se o serviço está de pé. Não recebe parâmetros.
 
 ```bash
-curl -H "Authorization: Bearer $KEY" http://localhost:8000/health
+curl -H "Authorization: Bearer $KEY" $URL/health
+```
+```json
+{"status": true}
 ```
 
 ### `GET /pipeline/`
 
-Retorna os dados da camada escolhida em JSON.
+Retorna os dados da camada escolhida em JSON, com status `201`.
 
-| Parâmetro | Valores | Padrão |
+| Parâmetro (query) | Valores | Padrão |
 |---|---|---|
-| `layer` | `raw`, `cleaned`, `processed` | `processed` |
+| `layer` | `raw`, `processed` (veja a observação abaixo sobre `cleaned`) | `processed` |
 
 ```bash
-curl -H "Authorization: Bearer $KEY" http://localhost:8000/pipeline/
-curl -H "Authorization: Bearer $KEY" "http://localhost:8000/pipeline/?layer=raw"
+curl -H "Authorization: Bearer $KEY" $URL/pipeline/
+curl -H "Authorization: Bearer $KEY" "$URL/pipeline/?layer=raw"
 ```
 
-Na camada `raw` a resposta é um objeto com as duas tabelas: `{"fazendas": [...], "coletas": [...]}`.
+- Na camada `processed`, a resposta é uma lista de registros agregados por fazenda e silo.
+- Na camada `raw`, a resposta é um objeto com as duas tabelas: `{"fazendas": [...], "coletas": [...]}`.
 
 Exemplo resumido de resposta (camada `processed`):
 
@@ -421,33 +463,28 @@ Exemplo resumido de resposta (camada `processed`):
 ]
 ```
 
+> **Limitação conhecida:** `?layer=cleaned` responde `501` com `Object of type Timestamp is not JSON serializable`, porque a coluna `data` dessa camada é uma data/hora que ainda não é convertida para JSON. Use `processed` ou `raw`.
+
 ### `GET /model/`
 
-Lista os nomes dos modelos disponíveis.
+Lista os nomes dos modelos que existem em `base/src/pipeline/ml/models/`. Use um desses nomes no parâmetro `model` das rotas de previsão.
 
 ```bash
-curl -H "Authorization: Bearer $KEY" http://localhost:8000/model/
+curl -H "Authorization: Bearer $KEY" $URL/model/
 ```
-
-### `POST /model/file`
-
-Recebe um arquivo `.parquet` ou `.csv` (separado por `;`) com várias coletas e devolve cada linha com todas as colunas originais mais a coluna `predict` (`aprovado` ou `reprovado`). O arquivo precisa ter as colunas que o modelo escolhido usa (para os modelos do repositório: `data`, `temperatura`, `ccs`, `cpp`, `tanque`, `estado` e `cidade`). As demais colunas são ignoradas na previsão e mantidas na resposta.
-
-| Parâmetro | Descrição |
-|---|---|
-| `model` (query) | Nome do modelo. Opcional; padrão: o mais recente |
-
-```bash
-curl -X POST "http://localhost:8000/model/file?model=anl_threshold_v2" \
-  -H "Authorization: Bearer $KEY" \
-  -F "file=@base/src/pipeline/storage/test/analise_leite_teste.parquet"
+```json
+["anl_v1", "anl_v2", "anl_threshold_v2", "anl_threshold", "anl_v3"]
 ```
-
-O campo do formulário deve se chamar `file`. Qualquer outra extensão é recusada.
 
 ### `POST /model/`
 
-Recebe uma coleta em JSON e devolve `"aprovado"` ou `"reprovado"`. **Todos os campos são opcionais no contrato**, mas o modelo escolhido exige as colunas que usa: se faltar uma delas, a resposta é um erro que cita as colunas ausentes. Campos que o modelo não usa são ignorados.
+Recebe **uma** coleta em JSON e devolve o texto `"aprovado"` ou `"reprovado"`.
+
+| Parâmetro (query) | Descrição |
+|---|---|
+| `model` | Nome do modelo. Opcional; padrão: o mais recente |
+
+Corpo da requisição (JSON):
 
 | Campo | Tipo | Exemplo |
 |---|---|---|
@@ -459,14 +496,117 @@ Recebe uma coleta em JSON e devolve `"aprovado"` ou `"reprovado"`. **Todos os ca
 | `cidade` | texto, sem acento | `"Betim"` |
 | `tanque` | texto | `"TC01"` |
 
+**Todos os campos são opcionais no contrato**, mas cada modelo exige as colunas que usa (listadas no `config.json` dele). Com os modelos do repositório, são exigidos os sete campos. Se faltar um, a resposta é `501` com a mensagem `Expeted columns <coluna>`. Campos que o modelo não usa são ignorados.
+
 ```bash
-curl -X POST "http://localhost:8000/model/?model=anl_threshold_v2" \
+curl -X POST "$URL/model/?model=anl_threshold_v2" \
   -H "Authorization: Bearer $KEY" \
   -H "Content-Type: application/json" \
   -d '{"temperature": 4.2, "state": "MG", "data": "2026-03-02", "ccs": 480, "cpp": 250, "cidade": "Betim", "tanque": "TC01"}'
 ```
+```json
+"aprovado"
+```
 
-Falhas na previsão respondem `501` com a mensagem do erro.
+### `POST /model/file`
+
+Recebe um arquivo `.parquet` ou `.csv` (separado por `;`) com **várias** coletas e devolve cada linha do arquivo, com **todas as colunas originais**, mais a coluna `predict` (`aprovado` ou `reprovado`).
+
+| Parâmetro | Onde | Descrição |
+|---|---|---|
+| `file` | formulário (`multipart/form-data`) | O arquivo. O nome do campo deve ser `file` |
+| `model` | query | Nome do modelo. Opcional; padrão: o mais recente |
+
+O arquivo precisa ter as colunas que o modelo escolhido usa (para os modelos do repositório: `data`, `temperatura`, `ccs`, `cpp`, `tanque`, `estado` e `cidade`). As demais colunas, como `fazenda_id` e `resultado_exame`, são ignoradas na previsão e mantidas na resposta.
+
+```bash
+curl -X POST "$URL/model/file?model=anl_threshold_v2" \
+  -H "Authorization: Bearer $KEY" \
+  -F "file=@base/src/pipeline/storage/test/analise_leite_teste.parquet"
+```
+
+Resposta (cada item é uma linha do arquivo; abaixo, o primeiro item):
+
+```json
+[
+  {
+    "fazenda_id": "F001",
+    "nome_fazenda": "Sitio Aurora I",
+    "produtor": "Adalberto Ribeiro",
+    "cidade": "Betim",
+    "estado": "MG",
+    "preco_litro": 2.36,
+    "data": "2025-09-03T00:00:00",
+    "tanque": "TC01",
+    "tipo_tanque": "comunitario",
+    "volume_litros": 1153,
+    "temperatura": 3.9,
+    "ccs": 690,
+    "cpp": 405,
+    "motorista": "Djalma Souto",
+    "caminhao": "CAM-102",
+    "silo": "SILO-B",
+    "resultado_exame": "aprovado",
+    "predict": "aprovado"
+  }
+]
+```
+
+Para comparar a previsão com o resultado real, basta comparar as colunas `predict` e `resultado_exame` (se o arquivo tiver a segunda).
+
+### Escolhendo o modelo
+
+| Modelo | Perfil |
+|---|---|
+| `anl_threshold_v2` | Treinado com todos os arquivos de treino (10 estados, 12 meses). Equilibra acertos e alarmes falsos. É o padrão, por ser o mais recente |
+| `anl_threshold` | Mesmo template, treinado com menos dados. Resultado muito parecido |
+| `anl_v3` | Template `balance`: encontra mais reprovados, com muitos alarmes falsos |
+| `anl_v1`, `anl_v2` | Treinados com a primeira versão dos dados. Mantidos só para comparação |
+
+As métricas de cada um estão na seção [Machine learning](#resultados).
+
+### Usando a API em Python
+
+```python
+import pandas as pd
+import requests
+
+URL = "http://localhost:8000"
+headers = {"Authorization": "Bearer uma-chave-secreta"}
+
+# 1. quais modelos existem?
+modelos = requests.get(f"{URL}/model/", headers=headers).json()
+print(modelos)
+
+# 2. prever uma coleta
+coleta = {"temperature": 4.2, "state": "MG", "data": "2026-03-02",
+          "ccs": 480, "cpp": 250, "cidade": "Betim", "tanque": "TC01"}
+resposta = requests.post(f"{URL}/model/", params={"model": "anl_threshold_v2"},
+                         json=coleta, headers=headers)
+print(resposta.status_code, resposta.json())      # 200 "aprovado"
+
+# 3. prever um arquivo e abrir o resultado como DataFrame
+with open("coletas.parquet", "rb") as f:
+    resposta = requests.post(f"{URL}/model/file", params={"model": "anl_threshold_v2"},
+                             files={"file": f}, headers=headers)
+df = pd.DataFrame(resposta.json())
+print(df["predict"].value_counts())
+```
+
+### Erros comuns
+
+| Resposta | Mensagem | Causa e o que fazer |
+|---|---|---|
+| `401` | `Expeted Authorization header` | Faltou o header `Authorization`. Envie `Authorization: Bearer <chave>` |
+| `403` | `Invalid Authorization header` | O header não tem o formato `Bearer <chave>` |
+| `401` | `Invalid credential` | A chave não é igual à `ML_KEY` do serviço |
+| `422` | detalhes do campo | Um campo do JSON é inválido (por exemplo, uma UF que não existe). A mensagem diz qual campo |
+| `501` | `Expeted columns ccs` | O modelo usa essa coluna e ela não veio. Envie a coluna que falta |
+| `501` | `No active exception to reraise` | O nome passado em `?model=` não existe. Consulte `GET /model/` e use um dos nomes |
+| `501` | `429: Expeted csv or parquet file` | O arquivo enviado não é `.csv` nem `.parquet` |
+| `501` | `Object of type Timestamp is not JSON serializable` | Foi pedido `?layer=cleaned`. Use `processed` ou `raw` |
+
+Os erros de previsão saem com status `501` e a mensagem em `detail`. Para ver as rotas e os esquemas de forma interativa, abra o Swagger em `/docs` com um cliente que consiga enviar o header `Authorization`.
 
 ## Testes e integração contínua
 
