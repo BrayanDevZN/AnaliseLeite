@@ -1,8 +1,7 @@
 "Junta todos os templates"
 from base.src.pipeline.logs.log import logger
 from .balance import Balance 
-
-
+from .threshold import Threshold
 class TemplateNotFound(Exception):
     pass 
 
@@ -14,7 +13,8 @@ class TrainModel:
         self.template = template
 
         self.templates = {
-            "balance": Balance
+            "balance": Balance,
+            "threshold": Threshold
         }
 
 
