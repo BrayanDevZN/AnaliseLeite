@@ -1,6 +1,7 @@
 from pathlib import Path 
 from base.src.ml.inference import ModelInference
 import pandas as pd
+from sklearn.metrics import recall_score, precision_score, f1_score, confusion_matrix
 
 class RunModel:
 
@@ -22,6 +23,14 @@ class RunModel:
         percent_acert = acerts / total 
         percent_error = error / total 
         print(f"percentual de acertos: {round(percent_acert * 100, 1)}% \npercentual de erros: {round(percent_error * 100, 1)}%")
+
+        y_real = df["resultado_exame"]
+        y_pred = df["predict"]
+        recall = recall_score(y_real, y_pred, pos_label="reprovado", zero_division=0)
+        precision = precision_score(y_real, y_pred, pos_label="reprovado", zero_division=0)
+        f1 = f1_score(y_real, y_pred, pos_label="reprovado", zero_division=0)
+        print(f"recall: {recall:.2%} | precision: {precision:.2%} | f1: {f1:.2%}")
+        print(confusion_matrix(y_real, y_pred, labels=["aprovado", "reprovado"]))
         
             
     @staticmethod
