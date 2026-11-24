@@ -25,7 +25,7 @@ async def response(data: SchemaResponse, model:str|None=None):
 
     except Exception as error:
 
-        HTTPException(
+        raise HTTPException(
             status_code=501,
             detail=str(error)
         )
