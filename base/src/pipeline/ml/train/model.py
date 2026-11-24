@@ -31,9 +31,11 @@ def main() -> None:
         else:
             name = f"anl_v{len(models) + 1}"
 
+        instance.name = name
+
         if len(args) == 3:
 
-            template = args[3]
+            template = args[2]
             instance.template = template
 
         

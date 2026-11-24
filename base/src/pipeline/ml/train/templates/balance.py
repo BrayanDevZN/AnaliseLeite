@@ -7,7 +7,7 @@ import pandas as pd
 class Balance:
 
     def __init__(self, model_name:str)->None:
-        self.BASE_DIR = Path(__file__).resolve().parent.parent
+        self.BASE_DIR = Path(__file__).resolve().parent.parent.parent
         self.name = model_name
         
 

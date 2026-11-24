@@ -22,7 +22,7 @@ class TrainModel:
 
         if self.template is None:
 
-            self.template = self.templates[self.templates.keys()[-1]]
+            self.template = self.templates[list(self.templates.keys())[-1]]
 
         else:
 
@@ -36,4 +36,4 @@ class TrainModel:
     async def run(self) -> None:
 
         self._get_template_()
-        self.instance.run()
+        await self.instance.run()
