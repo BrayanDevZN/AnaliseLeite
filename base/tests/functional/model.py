@@ -24,12 +24,13 @@ class RunModel:
         print(f"percentual de acertos: {round(percent_acert * 100, 1)}% \npercentual de erros: {round(percent_error * 100, 1)}%")
         
             
+    @staticmethod
     def response(data:str, temperatura:float, ccs:float, cpp:float, 
                  estado:str, cidade:str, tanque:str, model:str|None=None) -> None:
 
         instance = ModelInference(model=model)
-        args = locals()
-        print(instance.response(**args))
+        print(instance.response(data=data, temperatura=temperatura, ccs=ccs, cpp=cpp,
+                                estado=estado, cidade=cidade, tanque=tanque))
 
 
 def test_model() -> None:
@@ -44,6 +45,11 @@ def test_model() -> None:
     print(models)
     for model in models:
         instance.df(df=df, model=model)
+        row = df.iloc[0]
+        instance.response(
+            data=str(row["data"]), temperatura=row["temperatura"], ccs=row["ccs"], cpp=row["cpp"],
+            estado=row["estado"], cidade=row["cidade"], tanque=row["tanque"], model=model
+        )
         
 
 
