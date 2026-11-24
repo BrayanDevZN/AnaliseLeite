@@ -43,5 +43,11 @@ jobs:
             - name: analyze code
               run: go vet ./...
 
-            - name: execute unit
-              run: go test -race -coverpkg=./src/backend ./tests/unit/
+            - name: execute unit config and logs
+              run: go test -race -count=1 -coverpkg=./src/backend/... -skip 'TestHash|TestVerify|TestNewHasher|TestJWT' ./tests/unit/
+
+            - name: execute unit hash
+              run: go test -race -count=1 -coverpkg=./src/backend/... -run 'TestHash|TestVerify|TestNewHasher' ./tests/unit/
+
+            - name: execute unit jwt
+              run: go test -race -count=1 -coverpkg=./src/backend/... -run 'TestJWT' ./tests/unit/
