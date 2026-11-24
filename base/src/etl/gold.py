@@ -1,5 +1,5 @@
 from .silver import Silver
-from src.logs.log import logger
+from base.src.logs.log import logger
 import pandas as pd
 
 

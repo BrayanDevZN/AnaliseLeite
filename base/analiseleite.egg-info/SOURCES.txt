@@ -1,0 +1,17 @@
+pyproject.toml
+./src/etl/bronze.py
+./src/etl/file.py
+./src/etl/gold.py
+./src/etl/interface.py
+./src/etl/silver.py
+./src/etl/train.py
+./src/logs/log.py
+./src/ml/inference.py
+./src/ml/train/model.py
+./src/ml/train/template.py
+analiseleite.egg-info/PKG-INFO
+analiseleite.egg-info/SOURCES.txt
+analiseleite.egg-info/dependency_links.txt
+analiseleite.egg-info/entry_points.txt
+analiseleite.egg-info/requires.txt
+analiseleite.egg-info/top_level.txt

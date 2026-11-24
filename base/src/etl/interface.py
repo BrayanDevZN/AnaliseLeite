@@ -2,9 +2,10 @@
 from.gold import Gold
 from typing import Literal
 import pandas as pd
-class LoadData(Gold):
+from .train import Train
+class LoadData(Gold, Train):
 
-    def __init__(self, layer:Literal["processed", "cleaned", "raw"]="processed")->None:
+    def __init__(self, layer:Literal["processed", "cleaned", "raw", "train"]="processed")->None:
         super().__init__()
         self.layer = layer 
 
@@ -14,7 +15,8 @@ class LoadData(Gold):
         executing = {
             "processed": self.get_gold,
             "cleaned": self.get_silver,
-            "raw": self.get_raw
+            "raw": self.get_raw,
+            "train": self.get_train
         }
 
         return executing[self.layer]()

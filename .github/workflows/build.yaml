@@ -5,21 +5,25 @@ on:
         branches:
             - main
             - develop
+            - develop-v2
     pull_request:
         branches:
 
             - main
             - develop
+            - develop-v2
 
 jobs:
 
     build:
 
         runs-on: ubuntu-latest
+        environment: develop_pl
 
-        defaults:
-            run:
-                working-directory: base
+        env:
+          ML_KEY: ${{secrets.ML_KEY}}
+
+       
 
         steps:
 
@@ -30,26 +34,27 @@ jobs:
 
             - name: run docker
               run: |
-               docker compose -f src/controller/compose.yml up --build -d
+               docker compose -f base/compose.yml up --build -d
                sleep 10
 
             - name: install dependences
-              run: pip install -r src/controller/requirements.txt
+              run: pip install -r base/requirements.txt
 
             - name: execute unit
               run: |
-                python -m tests.unit.raw
+                python -m base.tests.unit.raw
 
             - name: execute integration 
               run: |
-               python -m tests.integration.silver
-               python -m tests.integration.gold
+               python -m base.tests.integration.silver
+               python -m base.tests.integration.train
+               python -m base.tests.integration.gold
 
             - name: execute functional
               run : |
                  pip install requests
-                 python -m tests.functional.model
-                 python -m tests.functional.api
+                 python -m base.tests.functional.model
+                 python -m base.tests.functional.api
 
             
 

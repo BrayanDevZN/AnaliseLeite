@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
-from src.etl.interface import LoadData
+from base.src.etl.interface import LoadData
 from typing import Literal
 router_pipeline = APIRouter(prefix="/pipeline", tags=["pipeline"])
 
