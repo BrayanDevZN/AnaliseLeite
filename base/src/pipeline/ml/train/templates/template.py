@@ -2,6 +2,7 @@
 from base.src.pipeline.logs.log import logger
 from .balance import Balance 
 from .threshold import Threshold
+from .base import BaseTemplate
 class TemplateNotFound(Exception):
     pass 
 
@@ -33,7 +34,18 @@ class TrainModel:
 
         self.instance = self.template(model_name=self.model)
 
+    #Decide como vai salvar
+    async def _execute(self) -> None:
+
+        result = await self.instance.run()
+        
+        base = (BaseTemplate(model=self.model, futures=list(result["model"].features_names_in_), threshold=result["trheshold"])
+                if isinstance(dict, result) else BaseTemplate(model=self.model, futures=list(result["model"].features_names_in_)))
+
+        base.save()
+        
+
     async def run(self) -> None:
 
         self._get_template_()
-        await self.instance.run()
+        await self._execute()

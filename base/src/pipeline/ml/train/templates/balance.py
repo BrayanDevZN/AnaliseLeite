@@ -55,24 +55,14 @@ class Balance:
 
         logger.success(f"model {self.name} trained with success")
 
-    async def _save_model(self) -> None:
-
-        logger.info(f"Saving model {self.name}...")
-
-        path = self.BASE_DIR / "models"
-
-        path.mkdir(exist_ok=True)
-
-        joblib.dump(self.model, path / f"{self.name}.joblib")
-
-        logger.success("Saved with success")
-
-    async def run(self) -> None:
+    
+    async def run(self) -> RandomForestClassifier:
 
         await self._load()
         await self._data()
         await self._train()
-        await self._save_model()
+
+        return self.model 
 
 
 

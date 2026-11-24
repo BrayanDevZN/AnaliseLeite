@@ -4,6 +4,7 @@ import pandas as pd
 from base.src.pipeline.logs.log import logger
 from sklearn.ensemble import RandomForestClassifier
 import os
+import json
 class ModelInference:
 
     def __init__(self, model:str|None=None)-> None:
@@ -16,28 +17,63 @@ class ModelInference:
         
 
     #Pega o nome do modelo
-    def _get_model(self) -> None:
+    def _get_model_path(self) -> None:
 
-        self.models = [str(model).replace(".joblib", "")  for model in os.listdir(self.BASE_DIR)]
+        self.models = [str(model)  for model in os.listdir(self.BASE_DIR)]
         
         if self.model is None:
-            self.model = str(max(self.BASE_DIR.glob("*.joblib"), key=lambda p: p.stat().st_mtime).stem)
+            self.model = max(self.BASE_DIR.glob("*/joblib"), key=lambda p: p.stat().st_mtime).parent.name
 
-        self.model = self.model.replace(".joblib", "") if ".joblib" in self.model else self.model
         
-       
         if not self.model in self.models:
             logger.error(f"Not exist model {self.model}")
             raise
 
-        self.path = str(self.BASE_DIR / self.model) + ".joblib"
+        self.path_model = str(self.BASE_DIR / self.model / "joblib")
+        self.path_config = str(self.BASE_DIR / self.model / "config.json")
+
+    def _get_config(self) -> None:
+
+        with open(self.path_config, "r", encoding="utf-8") as f:
+
+            self.config = json.load(f)
+
+
+    #Gera a resposta
+    def _predict(self, df:pd.DataFrame):
+
+        if len(df) == 1:
+
+            if self.config["threshold"] is not None:
+
+                prob = self.model.predict_proba(df)[0, 1]
+                return "aprovado" if prob >= self.config["threshold"] else "reprovado"
+
+            else:
+
+                return "aprovado" if self.model.predict(df).item() == 0 else "repovado"
+
+
+        if self.config["threshold"] is not None:
+
+            prob = self.model.predict_proba(df)[:, 1]
+            response = (prob >=self.config["threshold"]).astype(int)
+
+        else:
+
+            response = self.model.predict(df)
+
+        df["predict"] = pd.Series(response).map({1: "repovado", 0: "aprovado"})
+        return df
+
+
 
 
     def _load(self) -> None:
 
         logger.info(f"Loading model {self.model}...")
 
-        self.model:RandomForestClassifier = joblib.load(self.path)
+        self.model:RandomForestClassifier = joblib.load(self.path_model)
 
         logger.success(f"model {self.model} loaded with success")
 
@@ -70,10 +106,10 @@ class ModelInference:
         schema = schema.reindex(columns=self.model.feature_names_in_, fill_value=0)
         
 
-        resp = self.model.predict(schema).item()
+        resp = self._predict(df=schema)
         logger.success("Response generate with success")
 
-        return "aprovado" if resp == 0 else "reprovado"
+        return resp
 
     
 
@@ -108,12 +144,10 @@ class ModelInference:
         schema["day"] = schema["data"].dt.dayofweek
         schema = schema.drop(columns=["data"])
         schema = schema.reindex(columns=self.model.feature_names_in_, fill_value=0)
+
+
+        df = self._predict(df=schema)
         
-
-        response = self.model.predict(schema)
-
-        df["predict"] = pd.Series(response).map({1: "reprovado", 0: "aprovado"})
-
         logger.success("Response generated with success")
 
         return df
