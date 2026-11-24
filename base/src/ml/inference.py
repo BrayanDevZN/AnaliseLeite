@@ -67,7 +67,7 @@ class ModelInference:
         schema["day"] = schema["data"].dt.dayofyear
         schema = schema.drop(columns=["data"])
         schema = pd.get_dummies(columns=["tanque", "estado", "cidade"], dtype=int, data=schema)
-        schema = schema[self.model.feature_names_in_]
+        schema = schema.reindex(columns=self.model.feature_names_in_, fill_value=0)
         
 
         resp = self.model.predict(schema).item()
