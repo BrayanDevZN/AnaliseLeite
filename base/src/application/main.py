@@ -26,7 +26,7 @@ app.include_router(router_model)
 
 
 #Adiciona rota de verificação de saude
-@app.get("health")
+@app.get("/health")
 async def valid():
     return {"status": True}
 
