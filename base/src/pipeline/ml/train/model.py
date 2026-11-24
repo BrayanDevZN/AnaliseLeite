@@ -1,70 +1,64 @@
-import sys 
+import argparse
 from .templates.template import TrainModel
 import os
 from pathlib import Path
 from base.src.pipeline.logs.log import logger
 import asyncio
-USAGE = "Uso: model <train [nome] | list | drop <nome>>"
+
+
+#Cria o parser com os comandos train, list e drop
+def _parser() -> argparse.ArgumentParser:
+
+    parser = argparse.ArgumentParser(prog="model", description="Gerencia os modelos treinados")
+    commands = parser.add_subparsers(dest="command", required=True)
+
+    train = commands.add_parser("train", help="treina um modelo")
+    train.add_argument("--name", default=None, help="nome do modelo (padrao: anl_v<numero>)")
+    train.add_argument("--template", default=None, help="template de treino (padrao: o ultimo registrado)")
+
+    list_ = commands.add_parser("list", help="lista modelos ou templates")
+    list_.add_argument("what", choices=["model", "templates"], help="o que listar")
+
+    drop = commands.add_parser("drop", help="apaga um modelo")
+    drop.add_argument("name", help="nome do modelo")
+
+    return parser
 
 
 def main() -> None:
-    args = sys.argv[1:]
+
+    args = _parser().parse_args()
+
     BASE_DIR = Path(__file__).resolve().parent.parent / "models"
     BASE_DIR.mkdir(exist_ok=True)
     models = [str(model).replace(".joblib", "") for model in os.listdir(BASE_DIR)]
-    instance = TrainModel()
 
-    if not args:
-        print(USAGE)
-        sys.exit(1)
+    if args.command == "train":
 
-    command = args[0]
+        if args.name is None:
+            name = f"anl_v{len(models) + 1}"
 
-    if command == "train":
+        else:
+            name = args.name
 
-        if len(args) >= 2:
-
-            name = args[1]
             if name in models:
                 logger.warning(f"model will be {name} recreated")
 
-        else:
-            name = f"anl_v{len(models) + 1}"
-
-        instance.name = name
-
-        if len(args) == 3:
-
-            template = args[2]
-            instance.template = template
-
-        
+        instance = TrainModel(model=name, template=args.template)
         asyncio.run(instance.run())
 
-    elif command == "list":
+    elif args.command == "list":
 
-        if len(args) != 2:
-            raise ValueError("Expeted arg model or templates")
-
-        arg = args[1]
-
-        if arg == "model":
+        if args.what == "model":
             logger.info(f"Modelos disponiveis: {', '.join(models)}")
 
-        elif arg == "templates":
-            logger.info(f"templates disponiveis: {", ".join(instance.templates.keys())}")
-
         else:
-            raise ValueError(f"Not expeted arg {arg}")
+            templates = TrainModel(model="").templates
+            logger.info(f"templates disponiveis: {', '.join(templates.keys())}")
 
-        
+    elif args.command == "drop":
 
-    elif command == "drop":
-
-        if len(args) != 2:
-            raise ValueError("Expeted name model")
-
-        name = args[1]
+        name = args.name
 
         if name not in models:
             logger.warning(f"not exists model {name}")
@@ -73,10 +67,6 @@ def main() -> None:
 
             os.remove(BASE_DIR / f"{name}.joblib")
             logger.info(f"Droped model {name}")
-
-    else:
-        print(USAGE)
-        sys.exit(1)
 
 
 if __name__ == "__main__":
