@@ -12,7 +12,7 @@ def main() -> None:
     BASE_DIR = Path(__file__).resolve().parent.parent / "models"
     BASE_DIR.mkdir(exist_ok=True)
     models = [str(model).replace(".joblib", "") for model in os.listdir(BASE_DIR)]
-    instance = TrainModel(model_name=name)
+    instance = TrainModel()
 
     if not args:
         print(USAGE)
