@@ -1,7 +1,7 @@
 import joblib 
 from pathlib import Path 
 import pandas as pd
-from base.src.logs.log import logger
+from base.model.src.logs.log import logger
 from sklearn.ensemble import RandomForestClassifier
 import os
 class ModelInference:

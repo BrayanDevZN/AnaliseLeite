@@ -3,7 +3,7 @@ url = "http://0.0.0.0:8000"
 
 import requests
 from pathlib import Path
-from base.src.application.config import API_KEY
+from base.model.src.application.config import API_KEY
 header = {"Authorization": f"Bearer {API_KEY}"}
 response = requests.get(url=url + "/pipeline", headers=header)
 import pandas as pd

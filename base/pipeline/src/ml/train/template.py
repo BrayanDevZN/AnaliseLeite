@@ -1,7 +1,7 @@
 from sklearn.ensemble import RandomForestClassifier
-from base.src.etl.interface import LoadData
+from base.model.src.etl.interface import LoadData
 from pathlib import Path
-from base.src.logs.log import logger
+from base.model.src.logs.log import logger
 import joblib
 import pandas as pd
 class TrainModel:

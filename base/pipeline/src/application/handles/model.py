@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File
-from base.src.ml.inference import ModelInference
+from base.model.src.ml.inference import ModelInference
 router_model = APIRouter(prefix="/model", tags=["model"])
 import pandas as pd
 
-from base.src.application.schema import SchemaResponse
+from base.model.src.application.schema import SchemaResponse
 import io
 @router_model.post("/")
 async def response(data: SchemaResponse, model:str|None=None):

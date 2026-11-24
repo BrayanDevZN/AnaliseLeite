@@ -2,7 +2,7 @@ services:
     pipeline:
       build:
         context: ..
-        dockerfile: base/Dockerfile
+        dockerfile: base/Dockerfile.pipe
       environment:
         - ML_KEY=${ML_KEY}
       container_name: pipeline

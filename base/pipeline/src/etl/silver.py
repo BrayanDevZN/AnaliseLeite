@@ -1,5 +1,5 @@
 from .bronze import  Bronze
-from base.src.logs.log import logger
+from base.model.src.logs.log import logger
 import pandas as pd
 
 class Silver(Bronze):

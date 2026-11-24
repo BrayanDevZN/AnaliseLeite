@@ -1,4 +1,4 @@
-from base.src.etl.interface import LoadData
+from base.model.src.etl.interface import LoadData
 import asyncio
 
 try:

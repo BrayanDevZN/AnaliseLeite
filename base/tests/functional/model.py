@@ -1,5 +1,5 @@
 from pathlib import Path 
-from base.src.ml.inference import ModelInference
+from base.model.src.ml.inference import ModelInference
 import pandas as pd
 from sklearn.metrics import recall_score, precision_score, f1_score, confusion_matrix
 

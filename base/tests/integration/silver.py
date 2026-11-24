@@ -1,4 +1,4 @@
-from base.src.etl.silver import Silver
+from base.model.src.etl.silver import Silver
 import asyncio
 
 try:

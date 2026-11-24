@@ -1,7 +1,7 @@
 import asyncio
 try:
 
-    from base.src.etl.bronze import Bronze
+    from base.model.src.etl.bronze import Bronze
 
 
     instance = Bronze()

@@ -1,4 +1,4 @@
-from base.src.logs.log import logger 
+from base.model.src.logs.log import logger 
 from .silver import Silver
 import os 
 import pandas as pd

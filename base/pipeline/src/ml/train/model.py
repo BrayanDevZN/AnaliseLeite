@@ -2,7 +2,7 @@ import sys
 from .template import TrainModel
 import os
 from pathlib import Path
-from base.src.logs.log import logger
+from base.model.src.logs.log import logger
 import asyncio
 USAGE = "Uso: model <train [nome] | list | drop <nome>>"
 
