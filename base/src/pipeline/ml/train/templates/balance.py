@@ -4,7 +4,7 @@ from pathlib import Path
 from base.src.pipeline.logs.log import logger
 import joblib
 import pandas as pd
-class TrainModel:
+class Balance:
 
     def __init__(self, model_name:str)->None:
         self.BASE_DIR = Path(__file__).resolve().parent.parent
