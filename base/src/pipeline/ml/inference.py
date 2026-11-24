@@ -154,7 +154,7 @@ class ModelInference:
     def response_dataframe(self, df:pd.DataFrame) -> pd.DataFrame:
 
         used = self._used_columns()
-        schema = df.copy()
+        schema = df.copy().reset_index(drop=True)
         droped = []
 
         for column in list(schema.columns):
@@ -177,7 +177,11 @@ class ModelInference:
 
         schema = self._build_features(schema)
 
-        df = self._predict(df=schema)
+        result = self._predict(df=schema)
+
+        #O df original continua com todas as colunas, so ganha a coluna predict
+        df = df.copy()
+        df["predict"] = result if isinstance(result, str) else result["predict"].values
         
         logger.success("Response generated with success")
 
