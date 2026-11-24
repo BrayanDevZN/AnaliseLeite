@@ -107,7 +107,7 @@ class ModelInference:
         schema["year"] = schema["data"].dt.year
         schema["day"] = schema["data"].dt.dayofyear
         schema = schema.drop(columns=["data"])
-        schema = schema[self.model.feature_names_in_]
+        schema = schema.reindex(columns=self.model.feature_names_in_, fill_value=0)
         
 
         response = self.model.predict(schema)
