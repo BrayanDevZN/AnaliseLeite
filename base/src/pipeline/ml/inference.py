@@ -64,7 +64,7 @@ class ModelInference:
         schema["data"] = pd.to_datetime(schema["data"])
         schema["month"] = schema["data"].dt.month
         schema["year"] = schema["data"].dt.year
-        schema["day"] = schema["data"].dt.dayofyear
+        schema["day"] = schema["data"].dt.dayofweek
         schema = schema.drop(columns=["data"])
         schema = pd.get_dummies(columns=["tanque", "estado", "cidade"], dtype=int, data=schema)
         schema = schema.reindex(columns=self.model.feature_names_in_, fill_value=0)
@@ -105,7 +105,7 @@ class ModelInference:
         schema["data"] = pd.to_datetime(schema["data"])
         schema["month"] = schema["data"].dt.month
         schema["year"] = schema["data"].dt.year
-        schema["day"] = schema["data"].dt.dayofyear
+        schema["day"] = schema["data"].dt.dayofweek
         schema = schema.drop(columns=["data"])
         schema = schema.reindex(columns=self.model.feature_names_in_, fill_value=0)
         
