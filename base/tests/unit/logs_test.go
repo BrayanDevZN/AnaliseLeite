@@ -1,22 +1,25 @@
-package main
+package unit
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/BrayanDevZN/AnaliseLeite/base/src/backend"
 )
 
 // formato esperado de cada linha: [NIVEL] => 2026-01-02 15:04:05.000000+00:00 | mensagem
 var lineFormat = regexp.MustCompile(`^\[(INFO|SUCCESS|WARNING|ERROR)\] => \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{6}\+00:00 \| .*$`)
 
-func newTestLogger() (*Logger, *bytes.Buffer) {
+func newTestLogger() (*backend.Logger, *bytes.Buffer) {
 	var buffer bytes.Buffer
 
-	return NewLoggerWriter(&buffer), &buffer
+	return backend.NewLoggerWriter(&buffer), &buffer
 }
 
 func TestEachLevelWritesItsTag(t *testing.T) {
@@ -36,6 +39,21 @@ func TestEachLevelWritesItsTag(t *testing.T) {
 	for i, want := range []string{"[INFO] => ", "[SUCCESS] => ", "[WARNING] => ", "[ERROR] => "} {
 		if !strings.HasPrefix(lines[i], want) {
 			t.Errorf("linha %d: esperava comecar com %q, veio %q", i, want, lines[i])
+		}
+	}
+}
+
+func TestLevelConstantsMatchTheTags(t *testing.T) {
+	want := map[backend.Level]string{
+		backend.LevelInfo:    "INFO",
+		backend.LevelSuccess: "SUCCESS",
+		backend.LevelWarning: "WARNING",
+		backend.LevelError:   "ERROR",
+	}
+
+	for level, tag := range want {
+		if string(level) != tag {
+			t.Errorf("o nivel %q deveria valer %q", level, tag)
 		}
 	}
 }
@@ -66,7 +84,7 @@ func TestMessageFormatting(t *testing.T) {
 	}
 }
 
-func TestMessageWithoutArgsKeepsPercent(t *testing.T) {
+func TestMessageKeepsPercentSign(t *testing.T) {
 	logger, buffer := newTestLogger()
 
 	logger.Info("100%% de sucesso")
@@ -98,59 +116,69 @@ func TestNoColorWhenOutputIsNotTerminal(t *testing.T) {
 }
 
 func TestNoColorWhenOutputIsARegularFile(t *testing.T) {
-	file, err := os.Create(filepath.Join(t.TempDir(), "saida.log"))
+	path := filepath.Join(t.TempDir(), "saida.log")
+
+	file, err := os.Create(path)
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	defer file.Close()
+	logger := backend.NewLoggerWriter(file)
+	logger.Error("em arquivo")
+	file.Close()
 
-	if NewLoggerWriter(file).color {
-		t.Fatal("um arquivo comum nao deveria receber cores")
+	content, err := os.ReadFile(path)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if strings.Contains(string(content), "\033[") {
+		t.Fatalf("um arquivo comum nao deveria receber cores: %q", content)
+	}
+
+	if !strings.Contains(string(content), "em arquivo") {
+		t.Fatalf("a mensagem deveria ter sido escrita: %q", content)
 	}
 }
 
-func TestColorIsAppliedWhenEnabled(t *testing.T) {
-	var buffer bytes.Buffer
+func TestNoColorWhenNoColorIsSet(t *testing.T) {
+	t.Setenv("NO_COLOR", "1")
 
-	logger := &Logger{out: &buffer, color: true}
+	logger, buffer := newTestLogger()
 
-	logger.Info("a")
-	logger.Success("b")
-	logger.Warning("c")
-	logger.Error("d")
+	logger.Warning("sem cor")
 
-	for level, color := range levelColors {
-		want := color + string(level) + colorReset
-
-		if !strings.Contains(buffer.String(), want) {
-			t.Errorf("faltou a tag colorida de %s: %q", level, buffer.String())
-		}
+	if strings.Contains(buffer.String(), "\033[") {
+		t.Fatalf("NO_COLOR deveria desligar as cores: %q", buffer.String())
 	}
 }
 
-func TestEachLevelHasItsOwnColor(t *testing.T) {
-	seen := map[string]Level{}
+func TestNewLoggerWritesToStdout(t *testing.T) {
+	reader, writer, err := os.Pipe()
 
-	for level, color := range levelColors {
-		if other, repeated := seen[color]; repeated {
-			t.Errorf("%s e %s usam a mesma cor", level, other)
-		}
-
-		seen[color] = level
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	if len(levelColors) != 4 {
-		t.Fatalf("esperava uma cor para cada um dos 4 niveis, veio %d", len(levelColors))
+	original := os.Stdout
+	os.Stdout = writer
+
+	defer func() { os.Stdout = original }()
+
+	backend.NewLogger().Info("no terminal")
+
+	writer.Close()
+
+	output, err := io.ReadAll(reader)
+
+	if err != nil {
+		t.Fatal(err)
 	}
-}
 
-func TestLoggerDefaultsToStdout(t *testing.T) {
-	logger := NewLogger()
-
-	if logger.out != os.Stdout {
-		t.Fatal("NewLogger deveria escrever em stdout")
+	if !strings.Contains(string(output), "no terminal") {
+		t.Fatalf("NewLogger deveria escrever em stdout, veio %q", output)
 	}
 }
 
