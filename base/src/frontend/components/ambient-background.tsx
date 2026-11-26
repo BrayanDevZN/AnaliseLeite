@@ -2,11 +2,11 @@ import type { CSSProperties } from "react"
 
 /** As manchas de cor: uma de cada tom da paleta (verde, manteiga, céu, lilás, coral), cada uma com seu ritmo. */
 const BLOBS = [
-  { color: "var(--primary)", top: "-12%", left: "-10%", size: "34rem", opacity: 0.2, anim: "blob-drift-a 26s ease-in-out infinite" },
-  { color: "var(--butter)", top: "-14%", left: "62%", size: "32rem", opacity: 0.32, anim: "blob-drift-b 31s ease-in-out infinite" },
-  { color: "var(--sky)", top: "55%", left: "70%", size: "30rem", opacity: 0.26, anim: "blob-drift-a 35s ease-in-out -8s infinite" },
-  { color: "var(--lilac)", top: "58%", left: "-12%", size: "28rem", opacity: 0.22, anim: "blob-drift-b 29s ease-in-out -4s infinite" },
-  { color: "var(--coral)", top: "28%", left: "36%", size: "22rem", opacity: 0.12, anim: "blob-drift-a 38s ease-in-out -14s infinite" },
+  { color: "var(--primary)", top: "-12%", left: "-10%", size: "34rem", opacity: 0.3, anim: "blob-drift-a 26s ease-in-out infinite" },
+  { color: "var(--butter)", top: "-14%", left: "62%", size: "32rem", opacity: 0.42, anim: "blob-drift-b 31s ease-in-out infinite" },
+  { color: "var(--sky)", top: "55%", left: "70%", size: "30rem", opacity: 0.36, anim: "blob-drift-a 35s ease-in-out -8s infinite" },
+  { color: "var(--lilac)", top: "58%", left: "-12%", size: "28rem", opacity: 0.32, anim: "blob-drift-b 29s ease-in-out -4s infinite" },
+  { color: "var(--coral)", top: "28%", left: "36%", size: "22rem", opacity: 0.2, anim: "blob-drift-a 38s ease-in-out -14s infinite" },
 ]
 
 /** Bolhas de leite que sobem devagar: posição, tamanho, duração e atraso variados. */
