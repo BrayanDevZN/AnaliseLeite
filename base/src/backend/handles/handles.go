@@ -47,6 +47,9 @@ type Handles struct {
 	depends  *Depends
 	revoked  *revocations
 
+	// google e nil se o login com o Google nao esta configurado (veja google.go).
+	google *googleAuth
+
 	// dummyHash e verificado no login de um email que nao existe, para o tempo de resposta
 	// nao revelar quais emails tem conta.
 	dummyHash string
@@ -74,8 +77,15 @@ func New(logger *backend.Logger, db *database.Manage, requests *backend.Requests
 		return nil, fmt.Errorf("prepare password timing: %w", err)
 	}
 
+	google, err := newGoogleAuth(logger)
+
+	if err != nil {
+		return nil, err
+	}
+
 	return &Handles{
 		logger:    logger,
+		google:    google,
 		config:    config,
 		db:        db,
 		requests:  requests,
@@ -123,12 +133,14 @@ func (h *Handles) handlers() map[string]handler {
 	return map[string]handler{
 		"GET /health": h.health,
 
-		"POST /auth/register": h.register,
-		"POST /auth/login":    h.login,
-		"POST /auth/refresh":  h.refreshSession,
-		"POST /auth/logout":   h.logout,
-		"GET /me":             h.me,
-		"PATCH /me":           h.updateMe,
+		"POST /auth/register":       h.register,
+		"POST /auth/login":          h.login,
+		"POST /auth/refresh":        h.refreshSession,
+		"POST /auth/logout":         h.logout,
+		"GET /auth/google":          h.googleStart,
+		"GET /auth/google/callback": h.googleCallback,
+		"GET /me":                   h.me,
+		"PATCH /me":                 h.updateMe,
 
 		"POST /users":        h.createUser,
 		"GET /users":         h.listUsers,

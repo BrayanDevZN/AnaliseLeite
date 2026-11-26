@@ -75,6 +75,8 @@ var AuthRoutes = []Route{
 	{Method: http.MethodPost, Path: "/auth/login", Description: "entra com email e senha (tokens nos cookies)", Public: true, Request: LoginRequest{}, Response: SessionResponse{}},
 	{Method: http.MethodPost, Path: "/auth/refresh", Description: "troca o refresh token por tokens novos (cookies)", Public: true, Response: SessionResponse{}},
 	{Method: http.MethodPost, Path: "/auth/logout", Description: "sai: invalida o refresh token e limpa os cookies", Public: true, Response: MessageResponse{}},
+	{Method: http.MethodGet, Path: "/auth/google", Description: "comeca o login com o Google (redireciona para o Google)", Public: true},
+	{Method: http.MethodGet, Path: "/auth/google/callback", Description: "volta do Google: entra e redireciona (tokens nos cookies)", Public: true},
 	{Method: http.MethodGet, Path: "/me", Description: "dados do usuario logado", Response: UserResponse{}},
 	{Method: http.MethodPatch, Path: "/me", Description: "atualiza o proprio usuario (nao muda o papel)", Request: UpdateUserRequest{}, Response: UserResponse{}},
 }
