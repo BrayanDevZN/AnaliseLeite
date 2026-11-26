@@ -103,6 +103,15 @@ func Connect(ctx context.Context, logger *backend.Logger, options ...Option) *Co
 	return connection
 }
 
+// Logger devolve o logger da conexao (ou um logger novo se a conexao for nil).
+func (c *Connection) Logger() *backend.Logger {
+	if c == nil || c.logger == nil {
+		return backend.NewLogger()
+	}
+
+	return c.logger
+}
+
 // Wait espera a conexao terminar (com sucesso ou nao) e devolve o erro, se houve.
 func (c *Connection) Wait() error {
 	<-c.done
