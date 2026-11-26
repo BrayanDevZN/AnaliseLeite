@@ -340,3 +340,169 @@ func TestRequestsErrors(t *testing.T) {
 		t.Fatal("pipeline fora do ar deveria dar erro")
 	}
 }
+
+func TestRequestsSend(t *testing.T) {
+	ctx := context.Background()
+	server, seen := newFakePipeline(t)
+	requests, logs := newTestRequests(t, server.URL)
+
+	t.Run("get with query and headers", func(t *testing.T) {
+		response, err := requests.Send(ctx, backend.Request{
+			Method:  "get",
+			URL:     "model/",
+			Query:   map[string][]string{"x": {"1"}},
+			Headers: map[string]string{"X-Teste": "sim"},
+		})
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var models []string
+
+		if err := response.JSON(&models); err != nil || len(models) != 2 {
+			t.Fatalf("resposta errada: %s %v", response.Body, err)
+		}
+
+		if seen.method != "GET" || seen.path != "/model/" || seen.query != "x=1" || seen.auth != "Bearer "+testKey {
+			t.Fatalf("chamada errada: %+v", seen)
+		}
+	})
+
+	t.Run("query already in the url", func(t *testing.T) {
+		_, err := requests.Send(ctx, backend.Request{Method: "GET", URL: "/model/?a=1", Query: map[string][]string{"b": {"2"}}})
+
+		must(t, err)
+
+		if seen.query != "a=1&b=2" {
+			t.Fatalf("esperava a=1&b=2, veio %q", seen.query)
+		}
+	})
+
+	t.Run("bodies", func(t *testing.T) {
+		// qualquer valor que nao seja texto ou bytes vira JSON
+		_, err := requests.Send(ctx, backend.Request{Method: "POST", URL: "/model/", Body: map[string]any{"ccs": 10}})
+
+		must(t, err)
+
+		if seen.contentType != "application/json" || string(seen.body) != `{"ccs":10}` {
+			t.Fatalf("JSON errado: %q %s", seen.contentType, seen.body)
+		}
+
+		// texto vai como esta, e o Content-Type e o que voce disser
+		_, err = requests.Send(ctx, backend.Request{
+			Method: "POST", URL: "/model/", Body: "a;b\n1;2", Headers: map[string]string{"Content-Type": "text/csv"},
+		})
+
+		must(t, err)
+
+		if seen.contentType != "text/csv" || string(seen.body) != "a;b\n1;2" {
+			t.Fatalf("texto errado: %q %s", seen.contentType, seen.body)
+		}
+
+		_, err = requests.Send(ctx, backend.Request{Method: "PUT", URL: "/model/", Body: []byte{1, 2}})
+
+		must(t, err)
+
+		if seen.method != "PUT" || !bytes.Equal(seen.body, []byte{1, 2}) || seen.contentType != "" {
+			t.Fatalf("bytes errados: %+v", seen)
+		}
+
+		_, err = requests.Send(ctx, backend.Request{Method: "POST", URL: "/model/", Body: strings.NewReader("reader")})
+
+		must(t, err)
+
+		if string(seen.body) != "reader" {
+			t.Fatalf("reader errado: %s", seen.body)
+		}
+
+		if _, err := requests.Send(ctx, backend.Request{Method: "POST", URL: "/model/", Body: make(chan int)}); err == nil {
+			t.Fatal("corpo que nao vira JSON deveria dar erro")
+		}
+	})
+
+	t.Run("any status comes back without error", func(t *testing.T) {
+		response, err := requests.Send(ctx, backend.Request{Method: "GET", URL: "/nao-existe"})
+
+		if err != nil || response.StatusCode != 404 {
+			t.Fatalf("esperava 404 sem erro, veio %v %v", response, err)
+		}
+
+		// chave errada: 401, tambem sem erro
+		response, err = requests.Send(ctx, backend.Request{Method: "GET", URL: "/health", Headers: map[string]string{"Authorization": "Bearer outra"}})
+
+		if err != nil || response.StatusCode != 401 {
+			t.Fatalf("o Authorization do chamador deveria valer mais: %v %v", response, err)
+		}
+	})
+
+	t.Run("the key goes only to the model host", func(t *testing.T) {
+		// URL completa do mesmo host: leva a chave
+		_, err := requests.Send(ctx, backend.Request{Method: "GET", URL: server.URL + "/health"})
+
+		must(t, err)
+
+		if seen.auth != "Bearer "+testKey {
+			t.Fatalf("o mesmo host deveria receber a chave, veio %q", seen.auth)
+		}
+
+		// outro host: nunca leva a chave
+		var otherAuth string
+
+		other := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			otherAuth = r.Header.Get("Authorization")
+
+			io.WriteString(w, "ok")
+		}))
+
+		defer other.Close()
+
+		response, err := requests.Send(ctx, backend.Request{Method: "GET", URL: other.URL + "/x"})
+
+		if err != nil || string(response.Body) != "ok" {
+			t.Fatalf("resposta errada: %v %v", response, err)
+		}
+
+		if otherAuth != "" {
+			t.Fatalf("a chave vazou para outro host: %q", otherAuth)
+		}
+
+		// mas um Authorization que voce mesmo pos vai
+		_, err = requests.Send(ctx, backend.Request{Method: "GET", URL: other.URL, Headers: map[string]string{"Authorization": "Bearer meu"}})
+
+		must(t, err)
+
+		if otherAuth != "Bearer meu" {
+			t.Fatalf("o Authorization do chamador deveria ir, veio %q", otherAuth)
+		}
+	})
+
+	t.Run("invalid requests", func(t *testing.T) {
+		if _, err := requests.Send(ctx, backend.Request{URL: "/health"}); !errors.Is(err, backend.ErrInvalidMethod) {
+			t.Fatalf("sem metodo deveria dar ErrInvalidMethod, veio %v", err)
+		}
+
+		for _, bad := range []string{"", "ftp://localhost/x", "http://", "://x"} {
+			if _, err := requests.Send(ctx, backend.Request{Method: "GET", URL: bad}); !errors.Is(err, backend.ErrInvalidRequestURL) {
+				t.Errorf("URL %q deveria dar ErrInvalidRequestURL, veio %v", bad, err)
+			}
+		}
+
+		if _, err := requests.Send(ctx, backend.Request{Method: "GE T", URL: "/health"}); err == nil {
+			t.Fatal("metodo invalido deveria dar erro")
+		}
+	})
+
+	t.Run("logs", func(t *testing.T) {
+		text := logs.String()
+
+		if !strings.Contains(text, "Starting to send GET /model/") {
+			t.Fatalf("faltou o log da requisicao livre:\n%s", text)
+		}
+
+		// nem a chave, nem a URL, nem o query vao para os logs
+		if strings.Contains(text, testKey) || strings.Contains(text, server.URL) || strings.Contains(text, "a=1") {
+			t.Fatalf("dado sensivel nos logs:\n%s", text)
+		}
+	})
+}

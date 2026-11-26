@@ -39,6 +39,9 @@ var (
 	ErrInvalidModelURL = errors.New("invalid model url")
 	ErrInvalidLayer    = errors.New("invalid layer, expected processed, cleaned or raw")
 	ErrInvalidFile     = errors.New("expected a csv or parquet file")
+
+	ErrInvalidMethod     = errors.New("invalid request method")
+	ErrInvalidRequestURL = errors.New("invalid request url")
 )
 
 // RequestError e o erro devolvido quando o pipeline responde com um status que nao e 2xx.
@@ -94,6 +97,7 @@ func WithHTTPClient(client *http.Client) RequestsOption {
 type Requests struct {
 	logger  *Logger
 	baseURL string
+	base    *url.URL
 	key     string
 	hasURL  bool
 	hasKey  bool
@@ -161,6 +165,7 @@ func NewRequests(logger *Logger, options ...RequestsOption) (*Requests, error) {
 	}
 
 	requests.baseURL = strings.TrimRight(requests.baseURL, "/")
+	requests.base = parsed
 
 	return requests, nil
 }
@@ -279,7 +284,9 @@ func modelQuery(model string) url.Values {
 }
 
 // begin loga o comeco da chamada e devolve a funcao que loga o fim.
-func (r *Requests) begin(action string) func(*error) {
+func (r *Requests) begin(format string, args ...any) func(*error) {
+	action := fmt.Sprintf(format, args...)
+
 	r.logger.Info("Starting to %s...", action)
 
 	return func(err *error) {
@@ -301,23 +308,48 @@ func (r *Requests) do(ctx context.Context, method, path string, query url.Values
 		target += "?" + query.Encode()
 	}
 
+	header := http.Header{}
+
+	header.Set("Authorization", "Bearer "+r.key)
+	header.Set("Accept", "application/json")
+
+	if contentType != "" {
+		header.Set("Content-Type", contentType)
+	}
+
+	response, err := r.roundTrip(ctx, method, target, header, body)
+
+	if err != nil {
+		return err
+	}
+
+	if response.StatusCode < 200 || response.StatusCode > 299 {
+		return &RequestError{StatusCode: response.StatusCode, Detail: errorDetail(response.StatusCode, response.Body)}
+	}
+
+	if err := json.Unmarshal(response.Body, out); err != nil {
+		return fmt.Errorf("decode model service response: %w", err)
+	}
+
+	return nil
+}
+
+// roundTrip envia a requisicao e le a resposta inteira (de qualquer status).
+func (r *Requests) roundTrip(ctx context.Context, method, target string, header http.Header, body io.Reader) (*Response, error) {
 	request, err := http.NewRequestWithContext(ctx, method, target, body)
 
 	if err != nil {
-		return fmt.Errorf("build request: %w", err)
+		return nil, fmt.Errorf("build request: %w", err)
 	}
 
-	request.Header.Set("Authorization", "Bearer "+r.key)
-	request.Header.Set("Accept", "application/json")
-
-	if contentType != "" {
-		request.Header.Set("Content-Type", contentType)
+	for name, values := range header {
+		request.Header[name] = values
 	}
 
 	response, err := r.client.Do(request)
 
 	if err != nil {
-		return fmt.Errorf("call model service: %w", err)
+		return nil, fmt.Errorf("call model service: %w", err)
 	}
 
 	defer response.Body.Close()
@@ -325,18 +357,149 @@ func (r *Requests) do(ctx context.Context, method, path string, query url.Values
 	data, err := io.ReadAll(io.LimitReader(response.Body, maxResponseSize))
 
 	if err != nil {
-		return fmt.Errorf("read model service response: %w", err)
+		return nil, fmt.Errorf("read model service response: %w", err)
 	}
 
-	if response.StatusCode < 200 || response.StatusCode > 299 {
-		return &RequestError{StatusCode: response.StatusCode, Detail: errorDetail(response.StatusCode, data)}
-	}
+	return &Response{StatusCode: response.StatusCode, Header: response.Header, Body: data}, nil
+}
 
-	if err := json.Unmarshal(data, out); err != nil {
-		return fmt.Errorf("decode model service response: %w", err)
+// Request e uma requisicao livre para o Send.
+type Request struct {
+	// Method e o metodo HTTP (GET, POST, PUT, PATCH, DELETE...).
+	Method string
+
+	// URL pode ser um caminho (ex.: "/model/"), que vai para a MODEL_URL, ou uma URL completa
+	// (http:// ou https://). So as requisicoes para o proprio host da MODEL_URL levam a chave.
+	URL string
+
+	// Query e acrescentado na URL (opcional).
+	Query url.Values
+
+	// Headers sao os headers extras (opcional). Um Authorization seu vale mais que a chave automatica.
+	Headers map[string]string
+
+	// Body e o corpo (opcional): io.Reader, []byte e string vao como estao; qualquer outro valor
+	// vira JSON (e o Content-Type vira application/json, se voce nao definiu outro).
+	Body any
+}
+
+// Response e a resposta de uma requisicao livre, de qualquer status.
+type Response struct {
+	StatusCode int
+	Header     http.Header
+	Body       []byte
+}
+
+// JSON decodifica o corpo da resposta em out.
+func (r *Response) JSON(out any) error {
+	if err := json.Unmarshal(r.Body, out); err != nil {
+		return fmt.Errorf("decode response: %w", err)
 	}
 
 	return nil
+}
+
+// Send envia uma requisicao livre: voce diz o metodo, a URL, os dados e os headers.
+// Diferente dos outros metodos, qualquer status HTTP (inclusive 4xx e 5xx) volta como Response
+// sem erro; o erro so vem se a requisicao nao puder ser feita ou a resposta nao puder ser lida.
+// A chave (ML_KEY) so e enviada para o host da MODEL_URL, nunca para outro host.
+func (r *Requests) Send(ctx context.Context, request Request) (response *Response, err error) {
+	method := strings.ToUpper(strings.TrimSpace(request.Method))
+
+	if method == "" {
+		return nil, ErrInvalidMethod
+	}
+
+	target, sameHost, path, err := r.resolve(request.URL)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer r.begin("send %s %s", method, path)(&err)
+
+	if len(request.Query) > 0 {
+		separator := "?"
+
+		if strings.Contains(target, "?") {
+			separator = "&"
+		}
+
+		target += separator + request.Query.Encode()
+	}
+
+	body, contentType, err := encodeBody(request.Body)
+
+	if err != nil {
+		return nil, err
+	}
+
+	header := http.Header{}
+
+	if sameHost {
+		header.Set("Authorization", "Bearer "+r.key)
+	}
+
+	if contentType != "" {
+		header.Set("Content-Type", contentType)
+	}
+
+	for name, value := range request.Headers {
+		header.Set(name, value)
+	}
+
+	return r.roundTrip(ctx, method, target, header, body)
+}
+
+// resolve acha a URL final. Devolve tambem se ela e do host da MODEL_URL e o caminho (para o log).
+func (r *Requests) resolve(raw string) (target string, sameHost bool, path string, err error) {
+	parsed, err := url.Parse(raw)
+
+	// o erro do url.Parse repete a URL inteira, entao ele nao e repassado
+	if err != nil || raw == "" {
+		return "", false, "", ErrInvalidRequestURL
+	}
+
+	if parsed.IsAbs() {
+		if (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" {
+			return "", false, "", ErrInvalidRequestURL
+		}
+
+		sameHost = strings.EqualFold(parsed.Scheme, r.base.Scheme) && strings.EqualFold(parsed.Host, r.base.Host)
+
+		return raw, sameHost, parsed.Path, nil
+	}
+
+	if !strings.HasPrefix(raw, "/") {
+		raw = "/" + raw
+	}
+
+	return r.baseURL + raw, true, parsed.Path, nil
+}
+
+// encodeBody transforma o corpo no que vai na requisicao e devolve o Content-Type automatico.
+func encodeBody(body any) (io.Reader, string, error) {
+	switch value := body.(type) {
+	case nil:
+		return nil, "", nil
+
+	case io.Reader:
+		return value, "", nil
+
+	case []byte:
+		return bytes.NewReader(value), "", nil
+
+	case string:
+		return strings.NewReader(value), "", nil
+	}
+
+	data, err := json.Marshal(body)
+
+	if err != nil {
+		return nil, "", fmt.Errorf("encode request body: %w", err)
+	}
+
+	return bytes.NewReader(data), "application/json", nil
 }
 
 // errorDetail pega a mensagem do erro do FastAPI ({"detail": ...}).
