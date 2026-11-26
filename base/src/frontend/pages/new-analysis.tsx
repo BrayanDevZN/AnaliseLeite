@@ -6,6 +6,7 @@ import { RowsResult, SampleResult } from "@/components/analysis-result"
 import { EmptyState } from "@/components/empty-state"
 import { ErrorAlert } from "@/components/error-alert"
 import { PageHeader } from "@/components/page-header"
+import { ReportButton } from "@/components/report-button"
 import { SubmitButton } from "@/components/submit-button"
 import { TextField } from "@/components/text-field"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -102,6 +103,17 @@ export default function NewAnalysisPage() {
           <Button size="lg" className="sm:flex-1" onClick={again}>
             Fazer outra análise
           </Button>
+          <ReportButton
+            size="lg"
+            className="sm:flex-1"
+            data={() => ({
+              analysis: result,
+              farmName: selected?.name ?? `#${result.farm_id}`,
+              tank: tanks.data?.find((item) => item.id === result.tank_id),
+              contents: result.content ? [result.content] : [],
+              rows: result.rows,
+            })}
+          />
           <Link to="/analises" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "sm:flex-1")}>
             Ver minhas análises
           </Link>
