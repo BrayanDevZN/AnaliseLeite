@@ -1,4 +1,4 @@
-import { FlaskConicalIcon, HouseIcon, LogOutIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, TractorIcon, UserRoundIcon, UsersIcon, type LucideIcon } from "lucide-react"
+import { FlaskConicalIcon, CircleHelpIcon, HouseIcon, LogOutIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, TractorIcon, UserRoundIcon, UsersIcon, type LucideIcon } from "lucide-react"
 import { useState } from "react"
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router"
 
@@ -57,6 +57,7 @@ function useItems(): Item[] {
     { to: "/fazendas", label: "Fazendas", icon: TractorIcon, tone: "text-chart-3" },
     { to: "/analises", label: "Análises", icon: FlaskConicalIcon, tone: "text-chart-5" },
     ...(user?.role === "admin" ? [{ to: "/usuarios", label: "Usuários", icon: UsersIcon, tone: "text-chart-4" }] : []),
+    { to: "/ajuda", label: "Ajuda", icon: CircleHelpIcon, tone: "text-success" },
     { to: "/perfil", label: "Perfil", icon: UserRoundIcon, tone: "text-accent-foreground" },
   ]
 }

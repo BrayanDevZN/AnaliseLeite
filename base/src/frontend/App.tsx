@@ -19,6 +19,7 @@ const AnalysisDetailPage = lazy(() => import("@/pages/analysis-detail"))
 const ProfilePage = lazy(() => import("@/pages/profile"))
 const UsersPage = lazy(() => import("@/pages/users"))
 const UserDetailPage = lazy(() => import("@/pages/user-detail"))
+const HelpPage = lazy(() => import("@/pages/help"))
 const PhotoPage = lazy(() => import("@/pages/photo"))
 const NotFoundPage = lazy(() => import("@/pages/not-found"))
 
@@ -52,6 +53,7 @@ export function App() {
             <Route path="/analises/nova" element={<NewAnalysisPage />} />
             <Route path="/analises/:id" element={<AnalysisDetailPage />} />
             <Route path="/perfil" element={<ProfilePage />} />
+            <Route path="/ajuda" element={<HelpPage />} />
             <Route element={<RequireAdmin />}>
               <Route path="/usuarios" element={<UsersPage />} />
               <Route path="/usuarios/:id" element={<UserDetailPage />} />
