@@ -14,6 +14,7 @@
 //	PORT              porta do servidor (padrao 8080)
 //	COOKIE_INSECURE   "true" tira o Secure dos cookies (so para desenvolvimento local em http)
 //	COOKIE_DOMAIN     dominio dos cookies (padrao: o do proprio backend)
+//	COOKIE_SAMESITE   lax (padrao), strict ou none. "none" so se o site e o backend estiverem em sites diferentes (precisa de https)
 //	TRUST_PROXY       "true" confia no X-Forwarded-For (so atras de um proxy confiavel)
 //	CORS_ORIGINS      origens do frontend que podem chamar a API com cookies, separadas por virgula
 //	                  (ex.: http://localhost:5173). Sem ela, o CORS fica desligado
@@ -58,6 +59,7 @@ type settings struct {
 	port           string
 	cookieInsecure bool
 	cookieDomain   string
+	cookieSameSite http.SameSite
 	trustProxy     bool
 	corsOrigins    []string
 	adminEmail     string
@@ -140,6 +142,7 @@ func run(ctx context.Context, logger *backend.Logger) error {
 	routes, err := handles.New(logger, db, requests, hasher, access, refresh, handles.Config{
 		InsecureCookies: config.cookieInsecure,
 		CookieDomain:    config.cookieDomain,
+		SameSite:        config.cookieSameSite,
 	})
 
 	if err != nil {
@@ -280,7 +283,7 @@ func createAdmin(ctx context.Context, logger *backend.Logger, db *database.Manag
 
 // readSettings le as variaveis de ambiente opcionais.
 func readSettings() (settings, error) {
-	names := []string{"PORT", "COOKIE_INSECURE", "COOKIE_DOMAIN", "TRUST_PROXY", "CORS_ORIGINS", "ADMIN_EMAIL", "ADMIN_PASSWORD", "ADMIN_NAME"}
+	names := []string{"PORT", "COOKIE_INSECURE", "COOKIE_DOMAIN", "COOKIE_SAMESITE", "TRUST_PROXY", "CORS_ORIGINS", "ADMIN_EMAIL", "ADMIN_PASSWORD", "ADMIN_NAME"}
 
 	config, err := backend.NewConfig(names, nil)
 
@@ -326,8 +329,23 @@ func readSettings() (settings, error) {
 		return settings{}, errors.New("PORT must be a number between 1 and 65535")
 	}
 
+	switch strings.ToLower(text("COOKIE_SAMESITE", "lax")) {
+	case "lax", "":
+		result.cookieSameSite = http.SameSiteLaxMode
+	case "strict":
+		result.cookieSameSite = http.SameSiteStrictMode
+	case "none":
+		result.cookieSameSite = http.SameSiteNoneMode
+	default:
+		return settings{}, errors.New("COOKIE_SAMESITE must be lax, strict or none")
+	}
+
 	if result.cookieInsecure, err = flag("COOKIE_INSECURE"); err != nil {
 		return settings{}, err
+	}
+
+	if result.cookieSameSite == http.SameSiteNoneMode && result.cookieInsecure {
+		return settings{}, errors.New("COOKIE_SAMESITE=none needs https: remove COOKIE_INSECURE")
 	}
 
 	if result.trustProxy, err = flag("TRUST_PROXY"); err != nil {
