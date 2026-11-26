@@ -3,6 +3,7 @@ import type { ReactNode } from "react"
 import { GoogleIcon } from "@/components/google-icon"
 import { buttonVariants } from "@/components/ui/button"
 import { GOOGLE_LOGIN_URL } from "@/lib/api"
+import { markGoogleLogin, showTransition } from "@/lib/transition"
 import { cn } from "@/lib/utils"
 
 /**
@@ -11,7 +12,14 @@ import { cn } from "@/lib/utils"
  */
 export function GoogleButton({ children }: { children: ReactNode }) {
   return (
-    <a href={GOOGLE_LOGIN_URL} className={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
+    <a
+      href={GOOGLE_LOGIN_URL}
+      onClick={() => {
+        markGoogleLogin()
+        showTransition("google")
+      }}
+      className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
+    >
       <GoogleIcon className="size-4" />
       {children}
     </a>

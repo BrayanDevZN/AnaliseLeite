@@ -262,3 +262,31 @@
     animation: none !important;
   }
 }
+
+/* ---------- transicao de entrar/sair ---------- */
+
+@keyframes transition-spin {
+  0% { transform: perspective(600px) rotateY(-180deg) scale(0.6); opacity: 0; }
+  60% { transform: perspective(600px) rotateY(12deg) scale(1.06); opacity: 1; }
+  100% { transform: perspective(600px) rotateY(0deg) scale(1); opacity: 1; }
+}
+
+@keyframes transition-bar {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(0); }
+}
+
+.transition-spin {
+  animation: transition-spin 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.transition-bar {
+  animation: transition-bar 1.4s ease-in-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .transition-spin,
+  .transition-bar {
+    animation: none !important;
+  }
+}

@@ -4,6 +4,7 @@ import { Navigate, Route, Routes, useParams } from "react-router"
 import { AmbientBackground } from "@/components/ambient-background"
 import { AppShell } from "@/components/app-shell"
 import { ListSkeleton } from "@/components/list-skeleton"
+import { SessionTransition } from "@/components/session-transition"
 import { PublicOnly, RequireAdmin, RequireAuth } from "@/components/route-guards"
 
 // cada tela é carregada só quando é aberta: o celular baixa menos código na primeira visita
@@ -32,6 +33,7 @@ export function App() {
   return (
     <>
     <AmbientBackground />
+    <SessionTransition />
     <Suspense fallback={<div className="mx-auto w-full max-w-3xl p-4"><ListSkeleton /></div>}>
       <Routes>
         <Route element={<PublicOnly />}>

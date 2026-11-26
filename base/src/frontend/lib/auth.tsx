@@ -2,6 +2,7 @@ import { createContext, useContext, useMemo, type ReactNode } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { api, ApiError } from "@/lib/api"
+import { hideTransition, showTransition } from "@/lib/transition"
 import type { Session, User } from "@/lib/types"
 
 interface AuthContextValue {
@@ -46,6 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async login(email, password) {
         const session = await api.post<Session>("/auth/login", { email, password })
 
+        showTransition("in")
         client.setQueryData(ME, session.user)
 
         return session.user
@@ -56,7 +58,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async logout() {
         // Se o servidor não confirmar, o erro sobe para quem chamou: os cookies são HttpOnly (o navegador só os
         // apaga quando o servidor manda), então fingir que saiu deixaria a pessoa logada de verdade.
-        await api.post("/auth/logout")
+        showTransition("out")
+
+        try {
+          await api.post("/auth/logout")
+        } catch (error) {
+          hideTransition()
+
+          throw error
+        }
 
         // Atualiza a consulta de "quem está logado" (a que a tela observa) e apaga todo o resto,
         // para os dados de um usuário nunca aparecerem para o próximo. Não use client.clear(): ele

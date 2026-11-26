@@ -18,10 +18,14 @@ interface Props {
   title: string
   description: string
   onConfirm: () => void
+  /** O texto do botão que confirma (padrão "Apagar"). */
+  confirmLabel?: string
+  /** "destructive" (vermelho, o padrão) para apagar; "default" para ações como sair. */
+  variant?: "destructive" | "default"
 }
 
-/** Pede confirmação antes de apagar algo. */
-export function ConfirmDelete({ trigger, title, description, onConfirm }: Props) {
+/** Pede confirmação antes de uma ação difícil de desfazer (apagar, sair). */
+export function ConfirmDelete({ trigger, title, description, onConfirm, confirmLabel = "Apagar", variant = "destructive" }: Props) {
   return (
     <AlertDialog>
       <AlertDialogTrigger render={trigger as React.ReactElement} />
@@ -32,8 +36,8 @@ export function ConfirmDelete({ trigger, title, description, onConfirm }: Props)
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          <AlertDialogAction variant="destructive" onClick={onConfirm}>
-            Apagar
+          <AlertDialogAction variant={variant} onClick={onConfirm}>
+            {confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react"
 import { LogOutIcon, ShieldCheckIcon } from "lucide-react"
 import { useNavigate } from "react-router"
 
+import { ConfirmDelete } from "@/components/confirm-delete"
 import { ErrorAlert } from "@/components/error-alert"
 import { PageHeader } from "@/components/page-header"
 import { SubmitButton } from "@/components/submit-button"
@@ -176,10 +177,19 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      <Button variant="outline" size="lg" onClick={leave}>
-        <LogOutIcon data-icon="inline-start" />
-        Sair da conta
-      </Button>
+      <ConfirmDelete
+        trigger={
+          <Button variant="outline" size="lg">
+            <LogOutIcon data-icon="inline-start" />
+            Sair da conta
+          </Button>
+        }
+        title="Sair da conta?"
+        description="Você vai precisar entrar de novo para ver suas fazendas e análises."
+        confirmLabel="Sair"
+        variant="default"
+        onConfirm={leave}
+      />
     </>
   )
 }

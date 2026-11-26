@@ -2,6 +2,7 @@ import { FlaskConicalIcon, HouseIcon, LogOutIcon, TractorIcon, UserRoundIcon, Us
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router"
 
 import { Brand } from "@/components/brand"
+import { ConfirmDelete } from "@/components/confirm-delete"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { UserAvatar } from "@/components/user-avatar"
 import { Button } from "@/components/ui/button"
@@ -85,9 +86,18 @@ export function AppShell() {
             <span className="truncate text-xs text-muted-foreground">{user?.email}</span>
           </div>
           <ThemeToggle />
-          <Button variant="ghost" size="icon" aria-label="Sair" onClick={leave}>
-            <LogOutIcon />
-          </Button>
+          <ConfirmDelete
+            trigger={
+              <Button variant="ghost" size="icon" aria-label="Sair">
+                <LogOutIcon />
+              </Button>
+            }
+            title="Sair da conta?"
+            description="Você vai precisar entrar de novo para ver suas fazendas e análises."
+            confirmLabel="Sair"
+            variant="default"
+            onConfirm={leave}
+          />
         </div>
       </aside>
 
