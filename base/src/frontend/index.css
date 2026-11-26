@@ -8,6 +8,8 @@
 @theme inline {
     --font-heading: var(--font-sans);
     --font-sans: 'Geist Variable', sans-serif;
+    --color-coral: var(--coral);
+    --color-lilac: var(--lilac);
     --color-butter: var(--butter);
     --color-sky: var(--sky);
     --color-success-foreground: var(--success-foreground);
@@ -92,6 +94,9 @@
     /* manteiga: brilho da cena 3D e detalhes */
     --butter: oklch(0.88 0.13 92);
     --sky: oklch(0.8 0.08 230);
+    /* coral (quente) e lilas (o roxo do mascote, bem suave): variedade sem brigar com o verde */
+    --coral: oklch(0.76 0.12 35);
+    --lilac: oklch(0.78 0.09 300);
 }
 
 .dark {
@@ -130,6 +135,8 @@
     --sidebar-ring: oklch(0.72 0.13 152);
     --butter: oklch(0.84 0.13 92);
     --sky: oklch(0.7 0.09 230);
+    --coral: oklch(0.72 0.13 35);
+    --lilac: oklch(0.7 0.1 300);
 }
 
 @layer base {
@@ -152,16 +159,6 @@
 }
 
 /* ---------- fundo, profundidade e animacoes 3D ---------- */
-
-@layer base {
-  /* luz suave de pasto (verde) e manteiga, fixa atras de tudo */
-  body {
-    background-image:
-      radial-gradient(60rem 36rem at 105% -10%, color-mix(in oklch, var(--butter) 22%, transparent), transparent 70%),
-      radial-gradient(52rem 34rem at -10% 110%, color-mix(in oklch, var(--primary) 14%, transparent), transparent 70%);
-    background-attachment: fixed;
-  }
-}
 
 @layer utilities {
   /* sombra em camadas: da a sensacao de cartao flutuando sobre o fundo */
@@ -223,6 +220,31 @@
   .orbit-ring,
   .orbit-drop,
   .orbit-core {
+    animation: none !important;
+  }
+}
+
+/* ---------- fundo vivo: manchas de cor que derivam devagar e bolhas de leite subindo ---------- */
+
+@keyframes blob-drift-a {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(7vw, 6vh, 0) scale(1.14); }
+}
+
+@keyframes blob-drift-b {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1.05); }
+  50% { transform: translate3d(-8vw, -5vh, 0) scale(0.92); }
+}
+
+@keyframes bubble-rise {
+  0% { transform: translate3d(0, 0, 0) scale(0.6); opacity: 0; }
+  12% { opacity: var(--o, 0.5); }
+  100% { transform: translate3d(var(--dx, 20px), -110vh, 0) scale(1.1); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-blob,
+  .ambient-bubble {
     animation: none !important;
   }
 }

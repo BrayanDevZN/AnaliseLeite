@@ -16,17 +16,19 @@ interface Item {
   icon: LucideIcon
   /** O início é "/": sem `end`, ele ficaria marcado em todas as páginas. */
   end?: boolean
+  /** A cor do ícone (uma de cada tom da paleta). */
+  tone: string
 }
 
 function useItems(): Item[] {
   const { user } = useAuth()
 
   return [
-    { to: "/", label: "Início", icon: HouseIcon, end: true },
-    { to: "/fazendas", label: "Fazendas", icon: TractorIcon },
-    { to: "/analises", label: "Análises", icon: FlaskConicalIcon },
-    ...(user?.role === "admin" ? [{ to: "/usuarios", label: "Usuários", icon: UsersIcon }] : []),
-    { to: "/perfil", label: "Perfil", icon: UserRoundIcon },
+    { to: "/", label: "Início", icon: HouseIcon, end: true, tone: "text-primary" },
+    { to: "/fazendas", label: "Fazendas", icon: TractorIcon, tone: "text-chart-3" },
+    { to: "/analises", label: "Análises", icon: FlaskConicalIcon, tone: "text-chart-5" },
+    ...(user?.role === "admin" ? [{ to: "/usuarios", label: "Usuários", icon: UsersIcon, tone: "text-chart-4" }] : []),
+    { to: "/perfil", label: "Perfil", icon: UserRoundIcon, tone: "text-accent-foreground" },
   ]
 }
 
@@ -56,7 +58,7 @@ export function AppShell() {
         <Brand />
         <Separator />
         <nav aria-label="Principal" className="flex flex-1 flex-col gap-1">
-          {items.map(({ to, label, icon: Icon, end }) => (
+          {items.map(({ to, label, icon: Icon, end, tone }) => (
             <NavLink
               key={to}
               to={to}
@@ -70,7 +72,7 @@ export function AppShell() {
                 )
               }
             >
-              <Icon />
+              <Icon className={tone} />
               {label}
             </NavLink>
           ))}
@@ -109,7 +111,7 @@ export function AppShell() {
         className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/92 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
       >
         <ul className="grid" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
-          {items.map(({ to, label, icon: Icon, end }) => (
+          {items.map(({ to, label, icon: Icon, end, tone }) => (
             <li key={to}>
               <NavLink
                 to={to}
@@ -121,7 +123,7 @@ export function AppShell() {
                   )
                 }
               >
-                <Icon />
+                <Icon className={tone} />
                 {label}
               </NavLink>
             </li>

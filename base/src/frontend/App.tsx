@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react"
 import { Navigate, Route, Routes, useParams } from "react-router"
 
+import { AmbientBackground } from "@/components/ambient-background"
 import { AppShell } from "@/components/app-shell"
 import { ListSkeleton } from "@/components/list-skeleton"
 import { PublicOnly, RequireAdmin, RequireAuth } from "@/components/route-guards"
@@ -29,6 +30,8 @@ function LegacyNewAnalysis() {
 
 export function App() {
   return (
+    <>
+    <AmbientBackground />
     <Suspense fallback={<div className="mx-auto w-full max-w-3xl p-4"><ListSkeleton /></div>}>
       <Routes>
         <Route element={<PublicOnly />}>
@@ -57,6 +60,7 @@ export function App() {
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Suspense>
+    </>
   )
 }
 

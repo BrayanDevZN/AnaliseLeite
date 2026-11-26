@@ -25,7 +25,7 @@ export function WeekChart({ days }: { days: DayStats[] }) {
             <span className="h-4 text-xs font-medium text-muted-foreground">{day.analyses || ""}</span>
             <div className="flex w-full flex-1 items-end">
               <div
-                className={cn("w-full rounded-t-md", day.analyses > 0 ? (today ? "bg-primary" : "bg-primary/60") : "bg-muted")}
+                className={cn("w-full rounded-t-md", day.analyses > 0 ? (today ? "bg-gradient-to-t from-primary to-chart-3" : "bg-gradient-to-t from-primary/55 to-chart-3/55") : "bg-muted")}
                 style={{ height: `${day.analyses > 0 ? Math.max((day.analyses / max) * 100, 10) : 4}%` }}
               />
             </div>

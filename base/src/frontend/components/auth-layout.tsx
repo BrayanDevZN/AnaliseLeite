@@ -9,8 +9,8 @@ import { ThemeToggle } from "@/components/theme-toggle"
 export function AuthLayout({ title, description, children, mascot: showMascot = true }: { title: string; description: string; children: ReactNode; mascot?: boolean }) {
   return (
     <div className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden px-4 py-8 pt-[max(2rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))]">
-      <CowSpots className="pointer-events-none absolute -top-10 -right-24 size-[28rem] rotate-12 text-primary/[0.08]" />
-      <CowSpots className="pointer-events-none absolute -bottom-24 -left-28 size-[26rem] -rotate-12 text-primary/[0.08]" />
+      <CowSpots className="pointer-events-none absolute -top-10 -right-24 size-[28rem] rotate-12 text-lilac/25" />
+      <CowSpots className="pointer-events-none absolute -bottom-24 -left-28 size-[26rem] -rotate-12 text-lilac/25" />
 
       <div className="absolute top-[max(0.75rem,env(safe-area-inset-top))] right-3">
         <ThemeToggle />

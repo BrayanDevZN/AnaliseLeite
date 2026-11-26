@@ -97,9 +97,9 @@ export default function HomePage() {
         <>
           <div className="grid grid-cols-2 gap-3">
             <StatCard icon={TractorIcon} label="Fazendas" value={formatNumber(data.farms)} />
-            <StatCard icon={MilkIcon} label="Tanques" value={formatNumber(data.tanks)} />
-            <StatCard icon={FlaskConicalIcon} label="Análises" value={formatNumber(data.analyses)} />
-            <StatCard icon={ShieldCheckIcon} label="Aprovação" value={rate === null ? "—" : `${rate}%`} hint={rate === null ? "sem resultados ainda" : "das amostras"} />
+            <StatCard icon={MilkIcon} tone="sky" label="Tanques" value={formatNumber(data.tanks)} />
+            <StatCard icon={FlaskConicalIcon} tone="lilac" label="Análises" value={formatNumber(data.analyses)} />
+            <StatCard icon={ShieldCheckIcon} tone="butter" label="Aprovação" value={rate === null ? "—" : `${rate}%`} hint={rate === null ? "sem resultados ainda" : "das amostras"} />
           </div>
 
           {samples > 0 && (
