@@ -80,7 +80,7 @@ jobs:
               run: |
                   docker compose -f compose.yml up --build -d pipeline
                   for _ in $(seq 1 60); do
-                      if curl -fs -H "Authorization: Bearer $ML_KEY" http://localhost:8000/health > /dev/null; then
+                      if curl -fs -H "Authorization: Bearer $ML_KEY" http://localhost:7000/health > /dev/null; then
                           echo "pipeline is up"
                           exit 0
                       fi
@@ -93,7 +93,7 @@ jobs:
             - name: execute integration database, cache and pipeline
               run: go test -race -count=1 -coverpkg=./src/backend/... ./tests/integration/
 
-            # o backend roda direto no runner (sem docker) e fala com o pipeline que ja esta no ar na porta 8000.
+            # o backend roda direto no runner (sem docker) e fala com o pipeline que ja esta no ar na porta 7000.
             # As variaveis abaixo sao so de teste: nao sao segredos de verdade.
             - name: start backend
               env:
@@ -102,7 +102,7 @@ jobs:
                   ADMIN_PASSWORD: ci-admin-password-only-for-tests
                   COOKIE_INSECURE: "true"
                   PORT: "8080"
-                  MODEL_URL: http://localhost:8000
+                  MODEL_URL: http://localhost:7000
                   DATABASE_URL: sqlite:///tmp/backend-ci.db
               run: |
                   go build -o "$RUNNER_TEMP/backend" .

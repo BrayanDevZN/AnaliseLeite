@@ -15,6 +15,8 @@
 //	COOKIE_INSECURE   "true" tira o Secure dos cookies (so para desenvolvimento local em http)
 //	COOKIE_DOMAIN     dominio dos cookies (padrao: o do proprio backend)
 //	TRUST_PROXY       "true" confia no X-Forwarded-For (so atras de um proxy confiavel)
+//	CORS_ORIGINS      origens do frontend que podem chamar a API com cookies, separadas por virgula
+//	                  (ex.: http://localhost:5173). Sem ela, o CORS fica desligado
 //	ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NAME
 //	                  se definidas, criam esse admin na primeira vez que o backend sobe
 package main
@@ -56,6 +58,7 @@ type settings struct {
 	cookieInsecure bool
 	cookieDomain   string
 	trustProxy     bool
+	corsOrigins    []string
 	adminEmail     string
 	adminPassword  string
 	adminName      string
@@ -160,7 +163,16 @@ func run(ctx context.Context, logger *backend.Logger) error {
 		return err
 	}
 
-	return serve(ctx, logger, config.port, limiter.Handler(handler))
+	// o CORS fica por fora do rate limit, para ate a resposta 429 chegar ao frontend com os headers certos
+	var final http.Handler = limiter.Handler(handler)
+
+	if cors := midlleware.NewCORS(config.corsOrigins); cors != nil {
+		logger.Success("CORS enabled for %d origin(s)", len(config.corsOrigins))
+
+		final = cors.Handler(final)
+	}
+
+	return serve(ctx, logger, config.port, final)
 }
 
 // serve sobe o servidor e, quando o ctx e cancelado (Ctrl+C ou SIGTERM), termina as requisicoes em andamento.
@@ -263,7 +275,7 @@ func createAdmin(ctx context.Context, logger *backend.Logger, db *database.Manag
 
 // readSettings le as variaveis de ambiente opcionais.
 func readSettings() (settings, error) {
-	names := []string{"PORT", "COOKIE_INSECURE", "COOKIE_DOMAIN", "TRUST_PROXY", "ADMIN_EMAIL", "ADMIN_PASSWORD", "ADMIN_NAME"}
+	names := []string{"PORT", "COOKIE_INSECURE", "COOKIE_DOMAIN", "TRUST_PROXY", "CORS_ORIGINS", "ADMIN_EMAIL", "ADMIN_PASSWORD", "ADMIN_NAME"}
 
 	config, err := backend.NewConfig(names, nil)
 
@@ -315,6 +327,10 @@ func readSettings() (settings, error) {
 
 	if result.trustProxy, err = flag("TRUST_PROXY"); err != nil {
 		return settings{}, err
+	}
+
+	if result.corsOrigins, err = midlleware.ParseOrigins(text("CORS_ORIGINS", "")); err != nil {
+		return settings{}, fmt.Errorf("CORS_ORIGINS: %w", err)
 	}
 
 	return result, nil

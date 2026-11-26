@@ -10,8 +10,8 @@ import (
 	"github.com/BrayanDevZN/AnaliseLeite/base/src/backend"
 )
 
-// localModelURL e onde o compose.yml publica o pipeline (porta 8000 da maquina).
-const localModelURL = "http://localhost:8000"
+// localModelURL e onde o compose.yml publica o pipeline (porta 7000 da maquina).
+const localModelURL = "http://localhost:7000"
 
 // testParquet e o arquivo de teste que o pipeline ja usa nos testes funcionais.
 const testParquet = "../../src/pipeline/storage/test/analise_leite_teste.parquet"

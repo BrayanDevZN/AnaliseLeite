@@ -1,0 +1,6 @@
+# So o frontend entra no build (o backend, o pipeline e os modelos sao pesados e nao servem aqui).
+*
+!src/frontend
+# e dele, nada do que se gera na maquina: o build instala e compila por conta propria
+src/frontend/node_modules
+src/frontend/dist

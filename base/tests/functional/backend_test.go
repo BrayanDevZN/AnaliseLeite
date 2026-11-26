@@ -403,7 +403,7 @@ func TestBackend(t *testing.T) {
 		status, data, _ := user.send("POST", analysesPath, schema.CreateAnalysisRequest{TankID: &tank.ID, Sample: sample})
 
 		if status == http.StatusServiceUnavailable {
-			t.Skipf("o pipeline nao esta no ar (rode o pipeline na porta 8000): %s", data)
+			t.Skipf("o pipeline nao esta no ar (rode o pipeline na porta 7000): %s", data)
 		}
 
 		if status != 201 {
