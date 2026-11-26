@@ -729,6 +729,7 @@ Todas as variáveis podem vir do ambiente ou do arquivo `base/.env`. O modelo co
 | `GOOGLE_SUCCESS_URL`, `GOOGLE_FAILURE_URL` | não | `/` | Para onde o navegador vai depois de entrar e quando dá erro |
 | `VITE_API_URL` | não | `http://localhost:8080` | Endereço do backend como o **navegador** o enxerga (gravado no *build* da interface) |
 | `INTERFACE_PORT` | não | `5173` | Porta do site no seu computador |
+| `BACKEND_URL` | não | `http://backend:8080` | Só na interface: para onde o nginx repassa `/api/...`. Use com `VITE_API_URL=/api` quando o site e o backend ficam em domínios diferentes |
 
 | Serviço | Porta |
 |---|---:|
