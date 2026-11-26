@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react"
-import { PencilIcon, PlusIcon, ShieldCheckIcon, Trash2Icon } from "lucide-react"
+import { EyeIcon, PencilIcon, PlusIcon, ShieldCheckIcon, Trash2Icon } from "lucide-react"
+import { Link } from "react-router"
 
 import { ConfirmDelete } from "@/components/confirm-delete"
 import { ErrorAlert } from "@/components/error-alert"
@@ -11,7 +12,7 @@ import { SubmitButton } from "@/components/submit-button"
 import { TextField } from "@/components/text-field"
 import { UserAvatar } from "@/components/user-avatar"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -199,6 +200,9 @@ export default function UsersPage() {
                   </CardDescription>
                 </div>
                 <CardAction className="flex gap-1">
+                  <Link to={`/usuarios/${item.id}`} className={buttonVariants({ variant: "ghost", size: "icon-sm" })} aria-label={`Ver fazendas e tanques de ${item.name}`}>
+                    <EyeIcon />
+                  </Link>
                   <Button variant="ghost" size="icon-sm" aria-label={`Editar ${item.name}`} onClick={() => setDrawer({ open: true, user: item })}>
                     <PencilIcon />
                   </Button>
@@ -210,7 +214,7 @@ export default function UsersPage() {
                         </Button>
                       }
                       title={`Apagar ${item.name}?`}
-                      description="A pessoa perde o acesso na hora."
+                      description="A pessoa perde o acesso na hora, e as fazendas, tanques e análises dela também são apagados."
                       onConfirm={() => apagar(item)}
                     />
                   )}

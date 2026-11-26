@@ -14,6 +14,8 @@ export const keys = {
   contents: (id: number) => ["analyses", id, "contents"] as const,
   models: ["models"] as const,
   users: ["users"] as const,
+  user: (id: number) => ["users", id] as const,
+  userFarms: (id: number) => ["users", id, "farms"] as const,
 }
 
 /** O início e a lista de análises mostram números de tudo: qualquer mudança em fazendas, tanques ou análises os atualiza. */
@@ -182,6 +184,12 @@ export function useDeleteAnalysis() {
 // ---- usuários (admin) ----
 
 export const useUsers = () => useQuery({ queryKey: keys.users, queryFn: () => api.get<User[]>("/users") })
+
+export const useUser = (id: number) => useQuery({ queryKey: keys.user(id), queryFn: () => api.get<User>(`/users/${id}`), enabled: id > 0 })
+
+/** As fazendas de um usuário (só o admin pode pedir as de outro). */
+export const useUserFarms = (id: number) =>
+  useQuery({ queryKey: keys.userFarms(id), queryFn: () => api.get<Farm[]>(`/farms?user_id=${id}`), enabled: id > 0 })
 
 export interface UserInput {
   name: string

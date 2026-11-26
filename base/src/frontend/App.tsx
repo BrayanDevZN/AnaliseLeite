@@ -16,6 +16,7 @@ const AnalysesPage = lazy(() => import("@/pages/analyses"))
 const AnalysisDetailPage = lazy(() => import("@/pages/analysis-detail"))
 const ProfilePage = lazy(() => import("@/pages/profile"))
 const UsersPage = lazy(() => import("@/pages/users"))
+const UserDetailPage = lazy(() => import("@/pages/user-detail"))
 const PhotoPage = lazy(() => import("@/pages/photo"))
 const NotFoundPage = lazy(() => import("@/pages/not-found"))
 
@@ -48,6 +49,7 @@ export function App() {
             <Route path="/perfil" element={<ProfilePage />} />
             <Route element={<RequireAdmin />}>
               <Route path="/usuarios" element={<UsersPage />} />
+              <Route path="/usuarios/:id" element={<UserDetailPage />} />
             </Route>
           </Route>
         </Route>
