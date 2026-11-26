@@ -6,6 +6,7 @@ import { ErrorAlert } from "@/components/error-alert"
 import { FormDrawer } from "@/components/form-drawer"
 import { ListSkeleton } from "@/components/list-skeleton"
 import { PageHeader } from "@/components/page-header"
+import { PasswordChecklist } from "@/components/password-checklist"
 import { SubmitButton } from "@/components/submit-button"
 import { TextField } from "@/components/text-field"
 import { UserAvatar } from "@/components/user-avatar"
@@ -19,6 +20,7 @@ import { useAuth } from "@/lib/auth"
 import { notify } from "@/lib/notify"
 import { useCreateUser, useDeleteUser, useUpdateUser, useUsers } from "@/lib/queries"
 import type { User } from "@/lib/types"
+import { GMAIL_MESSAGE, isGmail, passwordProblem } from "@/lib/validation"
 
 const ROLES = [
   { value: "user", label: "Usuário" },
@@ -44,13 +46,49 @@ function UserForm({ user, onDone }: { user?: User; onDone: () => void }) {
   const [password, setPassword] = useState("")
   const [role, setRole] = useState<string>(user?.role ?? "user")
 
-  const fields = mutation.error instanceof ApiError ? mutation.error.fields : {}
+  const [local, setLocal] = useState<Record<string, string>>({})
+
+  const fields = { ...(mutation.error instanceof ApiError ? mutation.error.fields : {}), ...local }
 
   async function submit(event: FormEvent) {
     event.preventDefault()
 
+    // ao editar, só vai o que mudou: uma conta antiga com outro domínio de email continua editável
+    const changes = {
+      ...(!user || name.trim() !== user.name ? { name: name.trim() } : {}),
+      ...(!user || email.trim().toLowerCase() !== user.email ? { email: email.trim() } : {}),
+      ...(!user || role !== user.role ? { role } : {}),
+      ...(password ? { password } : {}),
+    }
+
+    const problems: Record<string, string> = {}
+
+    if (changes.email !== undefined && !isGmail(changes.email)) problems.email = GMAIL_MESSAGE
+
+    if (password) {
+      const weak = passwordProblem(password)
+
+      if (weak) problems.password = weak
+    }
+
+    setLocal(problems)
+
+    if (Object.keys(problems).length > 0) return
+
+    if (user && Object.keys(changes).length === 0) {
+      onDone()
+
+      return
+    }
+
     try {
-      await mutation.mutateAsync({ name: name.trim(), email: email.trim(), role, ...(password ? { password } : {}) })
+      // criar manda tudo; editar manda só `changes`
+      if (user) {
+        await update.mutateAsync(changes)
+      } else {
+        await create.mutateAsync({ name: name.trim(), email: email.trim(), role, ...(password ? { password } : {}) })
+      }
+
       notify.success(user ? "Usuário atualizado" : "Usuário criado")
       onDone()
     } catch {
@@ -73,6 +111,7 @@ function UserForm({ user, onDone }: { user?: User; onDone: () => void }) {
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           error={fields.email}
+          description={user ? undefined : "Só aceitamos emails @gmail.com."}
           required
         />
         <TextField
@@ -85,6 +124,7 @@ function UserForm({ user, onDone }: { user?: User; onDone: () => void }) {
           onChange={(event) => setPassword(event.target.value)}
           error={fields.password}
         />
+        {password && <PasswordChecklist value={password} />}
         <Field>
           <FieldLabel htmlFor="role">Papel</FieldLabel>
           <Select value={role} onValueChange={(value) => setRole(value ?? "user")} items={ROLES}>
@@ -145,7 +185,7 @@ export default function UsersPage() {
         {users.data?.map((item) => (
           <li key={item.id}>
             <Card size="sm">
-              <CardHeader className="flex-row items-center gap-3">
+              <CardHeader className="flex flex-row items-center gap-3">
                 <UserAvatar user={item} />
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <CardTitle className="truncate">{item.name}</CardTitle>

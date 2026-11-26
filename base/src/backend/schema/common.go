@@ -10,8 +10,17 @@ import (
 	"net/mail"
 	"regexp"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 )
+
+// AllowedEmailDomain e o unico dominio de email aceito ao criar uma conta ou trocar o email.
+const AllowedEmailDomain = "gmail.com"
+
+// IsAllowedEmail diz se o email (ja em minusculas) e do dominio aceito.
+func IsAllowedEmail(email string) bool {
+	return strings.HasSuffix(email, "@"+AllowedEmailDomain)
+}
 
 // Papeis dos usuarios.
 const (
@@ -160,6 +169,47 @@ func (v *validator) email(field, value string) {
 	// o dominio precisa ter um ponto (a@b e valido pela RFC, mas nao serve para ninguem)
 	if err != nil || address.Address != value || len(value) > maxEmailLength || !strings.Contains(value[strings.LastIndex(value, "@"):], ".") {
 		v.add(field, "is not a valid email")
+	}
+}
+
+// gmail confere que o email e do dominio aceito (so ao CRIAR uma conta ou TROCAR o email: quem ja tem conta
+// com outro dominio continua entrando e editando o perfil normalmente).
+func (v *validator) gmail(field, value string) {
+	if value != "" && !IsAllowedEmail(value) {
+		v.add(field, "must be a gmail.com address")
+	}
+}
+
+// newPassword valida uma senha NOVA: de 8 a 72 caracteres, com letra maiuscula, letra minuscula e numero.
+// O login nao usa esta regra (so confere a senha), para as contas antigas continuarem entrando.
+func (v *validator) newPassword(field, value string) {
+	v.password(field, value)
+
+	var upper, lower, digit bool
+
+	for _, char := range value {
+		switch {
+		case unicode.IsUpper(char):
+			upper = true
+
+		case unicode.IsLower(char):
+			lower = true
+
+		case unicode.IsDigit(char):
+			digit = true
+		}
+	}
+
+	if !upper {
+		v.add(field, "must have an uppercase letter")
+	}
+
+	if !lower {
+		v.add(field, "must have a lowercase letter")
+	}
+
+	if !digit {
+		v.add(field, "must have a number")
 	}
 }
 

@@ -46,7 +46,11 @@ var tables = []struct {
 		id         INTEGER PRIMARY KEY AUTOINCREMENT,
 		farm_id    INTEGER NOT NULL REFERENCES farms (id) ON DELETE CASCADE,
 		tank_id    INTEGER REFERENCES tanks (id) ON DELETE SET NULL,
-		created_at DATETIME NOT NULL
+		created_at DATETIME NOT NULL,
+		kind       TEXT NOT NULL DEFAULT 'sample',
+		model      TEXT NOT NULL DEFAULT '',
+		approved   INTEGER NOT NULL DEFAULT 0,
+		rejected   INTEGER NOT NULL DEFAULT 0
 	)`},
 	{"contents", `CREATE TABLE IF NOT EXISTS contents (
 		id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -61,6 +65,10 @@ var tables = []struct {
 // addedColumns sao as colunas que foram acrescentadas depois da primeira versao das tabelas.
 var addedColumns = []string{
 	"ALTER TABLE farms ADD COLUMN photo BLOB",
+	"ALTER TABLE analyses ADD COLUMN kind TEXT NOT NULL DEFAULT 'sample'",
+	"ALTER TABLE analyses ADD COLUMN model TEXT NOT NULL DEFAULT ''",
+	"ALTER TABLE analyses ADD COLUMN approved INTEGER NOT NULL DEFAULT 0",
+	"ALTER TABLE analyses ADD COLUMN rejected INTEGER NOT NULL DEFAULT 0",
 }
 
 // Migrate cria e apaga as tabelas do banco.
@@ -90,6 +98,12 @@ func (m *Migrate) CreateTables(ctx context.Context) error {
 			if err := exec(column); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
 				return fmt.Errorf("add column: %w", err)
 			}
+		}
+
+		// as analises feitas antes da coluna "kind" ficaram como amostra: as que tem arquivo viram "file"
+		// (pode rodar sempre: so mexe no que ainda esta errado)
+		if err := exec("UPDATE analyses SET kind = 'file' WHERE kind = 'sample' AND id IN (SELECT analysis_id FROM contents WHERE file IS NOT NULL)"); err != nil {
+			return fmt.Errorf("fix analyses kind: %w", err)
 		}
 
 		return nil

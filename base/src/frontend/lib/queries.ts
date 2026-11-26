@@ -1,18 +1,24 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query"
 
 import { api } from "@/lib/api"
-import type { Analysis, Content, Farm, ModelsResponse, Sample, Tank, User } from "@/lib/types"
+import type { Analysis, AnalysisPage, Content, Farm, ModelsResponse, Sample, Stats, Tank, User } from "@/lib/types"
 
 export const keys = {
   farms: ["farms"] as const,
   farm: (id: number) => ["farms", id] as const,
   tanks: (farmId: number) => ["farms", farmId, "tanks"] as const,
-  analyses: (farmId: number) => ["farms", farmId, "analyses"] as const,
+  /** Todas as análises do usuário (a página Análises e o início). */
+  myAnalyses: ["analyses", "mine"] as const,
+  stats: ["stats"] as const,
   analysis: (id: number) => ["analyses", id] as const,
   contents: (id: number) => ["analyses", id, "contents"] as const,
   models: ["models"] as const,
   users: ["users"] as const,
 }
+
+/** O início e a lista de análises mostram números de tudo: qualquer mudança em fazendas, tanques ou análises os atualiza. */
+const refreshSummaries = (client: QueryClient) =>
+  Promise.all([client.invalidateQueries({ queryKey: keys.stats }), client.invalidateQueries({ queryKey: keys.myAnalyses })])
 
 // As consultas por id só rodam com um id válido (> 0): assim uma tela que ainda não sabe o id não chama a API à toa.
 
@@ -33,7 +39,7 @@ export function useCreateFarm() {
 
   return useMutation({
     mutationFn: (input: FarmInput) => api.post<Farm>("/farms", input),
-    onSuccess: () => client.invalidateQueries({ queryKey: keys.farms }),
+    onSuccess: () => Promise.all([client.invalidateQueries({ queryKey: keys.farms }), refreshSummaries(client)]),
   })
 }
 
@@ -51,7 +57,7 @@ export function useDeleteFarm() {
 
   return useMutation({
     mutationFn: (id: number) => api.delete(`/farms/${id}`),
-    onSuccess: () => client.invalidateQueries({ queryKey: keys.farms }),
+    onSuccess: () => Promise.all([client.invalidateQueries({ queryKey: keys.farms }), refreshSummaries(client)]),
   })
 }
 
@@ -70,7 +76,7 @@ export function useCreateTank(farmId: number) {
 
   return useMutation({
     mutationFn: (input: TankInput) => api.post<Tank>(`/farms/${farmId}/tanks`, input),
-    onSuccess: () => client.invalidateQueries({ queryKey: keys.tanks(farmId) }),
+    onSuccess: () => Promise.all([client.invalidateQueries({ queryKey: keys.tanks(farmId) }), refreshSummaries(client)]),
   })
 }
 
@@ -88,14 +94,34 @@ export function useDeleteTank(farmId: number) {
 
   return useMutation({
     mutationFn: (id: number) => api.delete(`/tanks/${id}`),
-    onSuccess: () => client.invalidateQueries({ queryKey: keys.tanks(farmId) }),
+    onSuccess: () => Promise.all([client.invalidateQueries({ queryKey: keys.tanks(farmId) }), refreshSummaries(client)]),
   })
 }
 
 // ---- análises ----
 
-export const useAnalyses = (farmId: number) =>
-  useQuery({ queryKey: keys.analyses(farmId), queryFn: () => api.get<Analysis[]>(`/farms/${farmId}/analyses`), enabled: farmId > 0 })
+const PAGE_SIZE = 20
+
+/** Todas as análises do usuário (de todas as fazendas), em páginas: `fetchNextPage` carrega mais. */
+export const useMyAnalyses = () =>
+  useInfiniteQuery({
+    queryKey: keys.myAnalyses,
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) => api.get<AnalysisPage>(`/analyses?limit=${PAGE_SIZE}&offset=${pageParam}`),
+    getNextPageParam: (last, pages) => {
+      const loaded = pages.reduce((sum, page) => sum + page.items.length, 0)
+
+      return loaded < last.total ? loaded : undefined
+    },
+  })
+
+/** O resumo da página de início. Os dias seguem o fuso do aparelho. */
+export const useStats = () =>
+  useQuery({
+    queryKey: keys.stats,
+    // getTimezoneOffset é quantos minutos o fuso está ATRÁS de UTC; o servidor quer os minutos À FRENTE
+    queryFn: () => api.get<Stats>(`/stats?offset=${-new Date().getTimezoneOffset()}`),
+  })
 
 export const useAnalysis = (id: number) =>
   useQuery({ queryKey: keys.analysis(id), queryFn: () => api.get<Analysis>(`/analyses/${id}`), enabled: id > 0 })
@@ -140,16 +166,16 @@ export function useCreateAnalysis(farmId: number) {
         sample: input.sample,
       })
     },
-    onSuccess: () => client.invalidateQueries({ queryKey: keys.analyses(farmId) }),
+    onSuccess: () => refreshSummaries(client),
   })
 }
 
-export function useDeleteAnalysis(farmId: number) {
+export function useDeleteAnalysis() {
   const client = useQueryClient()
 
   return useMutation({
     mutationFn: (id: number) => api.delete(`/analyses/${id}`),
-    onSuccess: () => client.invalidateQueries({ queryKey: keys.analyses(farmId) }),
+    onSuccess: () => refreshSummaries(client),
   })
 }
 

@@ -6,6 +6,7 @@ import { ErrorAlert } from "@/components/error-alert"
 import { PageHeader } from "@/components/page-header"
 import { SubmitButton } from "@/components/submit-button"
 import { TextField } from "@/components/text-field"
+import { PasswordChecklist } from "@/components/password-checklist"
 import { PhotoPicker } from "@/components/photo-picker"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -18,6 +19,7 @@ import { AVATAR_SIDE } from "@/lib/image"
 import { useMyPhoto, useUserPhoto } from "@/lib/photos"
 import { notify } from "@/lib/notify"
 import type { User } from "@/lib/types"
+import { GMAIL_MESSAGE, isGmail, passwordProblem } from "@/lib/validation"
 
 export default function ProfilePage() {
   const { user, setUser, logout } = useAuth()
@@ -28,15 +30,32 @@ export default function ProfilePage() {
   const [password, setPassword] = useState("")
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<unknown>(null)
+  const [local, setLocal] = useState<Record<string, string>>({})
   const photo = useUserPhoto(user)
   const myPhoto = useMyPhoto()
 
   if (!user) return null
 
-  const fields = error instanceof ApiError ? error.fields : {}
+  const fields = { ...(error instanceof ApiError ? error.fields : {}), ...local }
 
   async function save(event: FormEvent) {
     event.preventDefault()
+
+    // a regra do email só vale se ele MUDOU (uma conta antiga com outro domínio continua editável)
+    const problems: Record<string, string> = {}
+
+    if (email.trim().toLowerCase() !== user!.email && !isGmail(email)) problems.email = GMAIL_MESSAGE
+
+    if (password) {
+      const weak = passwordProblem(password)
+
+      if (weak) problems.password = weak
+    }
+
+    setLocal(problems)
+
+    if (Object.keys(problems).length > 0) return
+
     setPending(true)
     setError(null)
 
@@ -148,6 +167,7 @@ export default function ProfilePage() {
                 onChange={(event) => setPassword(event.target.value)}
                 error={fields.password}
               />
+              {password && <PasswordChecklist value={password} />}
               <SubmitButton size="lg" pending={pending} pendingLabel="Salvando">
                 Salvar alterações
               </SubmitButton>

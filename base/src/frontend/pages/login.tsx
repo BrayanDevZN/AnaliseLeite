@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react"
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router"
+import { Link, useSearchParams } from "react-router"
 
 import { AuthLayout } from "@/components/auth-layout"
 import { ErrorAlert } from "@/components/error-alert"
@@ -14,8 +14,6 @@ import { GOOGLE_ERRORS } from "@/lib/format"
 
 export default function LoginPage() {
   const { login } = useAuth()
-  const navigate = useNavigate()
-  const location = useLocation()
   const [params] = useSearchParams()
 
   const [email, setEmail] = useState("")
@@ -33,8 +31,8 @@ export default function LoginPage() {
     setError(null)
 
     try {
+      // depois do login, quem navega é o guarda PublicOnly (para o `from`, se houver, ou as fazendas)
       await login(email.trim(), password)
-      navigate((location.state as { from?: string } | null)?.from ?? "/fazendas", { replace: true })
     } catch (caught) {
       // nas telas de entrar, 401 quer dizer "email ou senha errados"
       setError(caught instanceof ApiError && caught.status === 401 ? new Error("Email ou senha incorretos.") : caught)

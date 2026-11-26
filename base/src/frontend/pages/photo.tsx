@@ -22,7 +22,7 @@ export default function PhotoPage() {
 
   if (!user) return null
 
-  const next = () => navigate("/fazendas", { replace: true })
+  const next = () => navigate("/", { replace: true })
 
   async function save() {
     if (!picked) return

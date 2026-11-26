@@ -68,10 +68,11 @@ func (r *CreateUserRequest) Validate() error {
 
 	v.text("name", r.Name, maxNameLength)
 	v.email("email", r.Email)
+	v.gmail("email", r.Email)
 	v.role("role", r.Role)
 
 	if r.Password != nil {
-		v.password("password", *r.Password)
+		v.newPassword("password", *r.Password)
 	}
 
 	return v.err()
@@ -146,7 +147,7 @@ func (r *UpdateUserRequest) Validate() error {
 	}
 
 	if r.Password != nil {
-		v.password("password", *r.Password)
+		v.newPassword("password", *r.Password)
 	}
 
 	if r.Role != nil {
@@ -184,6 +185,11 @@ func (r *UpdateUserRequest) Validate() error {
 func (r *UpdateUserRequest) Apply(user *operations.User, hash HashFunc) error {
 	if err := r.Validate(); err != nil {
 		return err
+	}
+
+	// a regra do dominio vale so quando o email MUDA: uma conta antiga com outro dominio segue editavel
+	if r.Email != nil && *r.Email != user.Email && !IsAllowedEmail(*r.Email) {
+		return &ValidationError{Errors: []FieldError{{Field: "email", Message: "must be a gmail.com address"}}}
 	}
 
 	if r.Password != nil {

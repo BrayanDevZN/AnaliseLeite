@@ -58,13 +58,47 @@ export interface Sample {
 export interface Analysis {
   id: number
   farm_id: number
+  /** O nome da fazenda: só vem na lista de todas as análises (GET /analyses). */
+  farm_name?: string
   tank_id: number | null
   created_at: string
+  /** "sample" (uma amostra) ou "file" (um arquivo). */
+  kind: "sample" | "file"
+  /** O modelo usado; vazio é o modelo padrão. */
+  model: string
+  /** Quantas amostras o modelo aprovou e reprovou. Os dois zero: o resultado não foi guardado (análise antiga). */
+  approved: number
+  rejected: number
   content?: Content
   /** "aprovado" ou "reprovado": só vem na resposta de criação (o banco não guarda). */
   result?: string
   /** Uma linha por linha do arquivo enviado: só vem na resposta de criação. */
   rows?: Record<string, unknown>[]
+}
+
+/** Uma página da lista de análises. */
+export interface AnalysisPage {
+  items: Analysis[]
+  total: number
+}
+
+export interface DayStats {
+  /** O dia, como 2025-09-01. */
+  date: string
+  analyses: number
+  approved: number
+  rejected: number
+}
+
+/** O resumo da página de início. */
+export interface Stats {
+  farms: number
+  tanks: number
+  analyses: number
+  approved: number
+  rejected: number
+  /** Os últimos 7 dias, do mais antigo para hoje. */
+  days: DayStats[]
 }
 
 export interface ModelsResponse {

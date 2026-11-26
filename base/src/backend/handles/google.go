@@ -52,6 +52,7 @@ var (
 	errNoGoogle = &httpError{http.StatusServiceUnavailable, "google login is not configured"}
 
 	errGoogleEmailNotVerified = errors.New("google email is not verified")
+	errGoogleEmailNotAllowed  = errors.New("google email is not from an allowed domain")
 )
 
 // googleAuth e a configuracao do login com o Google.
@@ -274,6 +275,11 @@ func (h *Handles) googleCallback(w http.ResponseWriter, r *http.Request, _ *Prin
 
 		return
 
+	case errors.Is(err, errGoogleEmailNotAllowed):
+		h.googleFailure(w, r, "email_not_allowed", nil)
+
+		return
+
 	case err != nil:
 		h.googleFailure(w, r, "server_error", err)
 
@@ -451,6 +457,11 @@ func (h *Handles) googleUser(ctx context.Context, claims *googleClaims) (*operat
 
 	if !errors.Is(err, operations.ErrNotFound) {
 		return nil, err
+	}
+
+	// so a CRIACAO de uma conta exige o dominio aceito: quem ja tem conta (de qualquer dominio) segue entrando
+	if !schema.IsAllowedEmail(email) {
+		return nil, errGoogleEmailNotAllowed
 	}
 
 	name := strings.TrimSpace(claims.Name)

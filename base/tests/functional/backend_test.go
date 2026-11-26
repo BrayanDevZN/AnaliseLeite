@@ -285,8 +285,8 @@ func TestBackend(t *testing.T) {
 	})
 
 	// um usuario so deste teste, apagado no fim
-	email := "functional-" + randomID(t) + "@example.com"
-	password := "senha-funcional-" + randomID(t)
+	email := "functional-" + randomID(t) + "@gmail.com"
+	password := "Senha-funcional-1" + randomID(t)
 
 	var created schema.UserResponse
 
@@ -353,7 +353,7 @@ func TestBackend(t *testing.T) {
 		}
 
 		// outro usuario nao ve a fazenda; o admin ve
-		otherEmail, otherPassword := "functional-"+randomID(t)+"@example.com", "senha-outro-"+randomID(t)
+		otherEmail, otherPassword := "functional-"+randomID(t)+"@gmail.com", "Senha-outro-1"+randomID(t)
 
 		anonymous.call("POST", "/auth/register", schema.RegisterRequest{Name: "Outro", Email: otherEmail, Password: otherPassword}, 201, &otherUser)
 		other.expect("POST", "/auth/login", schema.LoginRequest{Email: otherEmail, Password: otherPassword}, 200)

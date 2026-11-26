@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/BrayanDevZN/AnaliseLeite/base/src/backend/database/repository/operations"
 )
@@ -85,4 +86,21 @@ func (x *Analyses) Delete(ctx context.Context, id int64) error {
 	x.cache.delete(ctx, keys...)
 
 	return nil
+}
+
+// ListByUser, Totals e Activity leem direto do banco, sem cache: mudam a cada analise nova e vem de varias fazendas.
+
+// ListByUser devolve as analises de todas as fazendas de um usuario (mais novas primeiro) e o total.
+func (x *Analyses) ListByUser(ctx context.Context, userID int64, limit, offset int) ([]operations.UserAnalysis, int, error) {
+	return x.db.ListByUser(ctx, userID, limit, offset)
+}
+
+// Totals devolve os totais do usuario para o dashboard.
+func (x *Analyses) Totals(ctx context.Context, userID int64) (operations.Totals, error) {
+	return x.db.Totals(ctx, userID)
+}
+
+// Activity devolve as analises do usuario feitas a partir de since.
+func (x *Analyses) Activity(ctx context.Context, userID int64, since time.Time) ([]operations.Activity, error) {
+	return x.db.Activity(ctx, userID, since)
 }

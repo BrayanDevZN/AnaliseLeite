@@ -1,4 +1,4 @@
-import { LogOutIcon, TractorIcon, UserRoundIcon, UsersIcon, type LucideIcon } from "lucide-react"
+import { FlaskConicalIcon, HouseIcon, LogOutIcon, TractorIcon, UserRoundIcon, UsersIcon, type LucideIcon } from "lucide-react"
 import { NavLink, Outlet, useNavigate } from "react-router"
 
 import { Brand } from "@/components/brand"
@@ -14,13 +14,17 @@ interface Item {
   to: string
   label: string
   icon: LucideIcon
+  /** O início é "/": sem `end`, ele ficaria marcado em todas as páginas. */
+  end?: boolean
 }
 
 function useItems(): Item[] {
   const { user } = useAuth()
 
   return [
+    { to: "/", label: "Início", icon: HouseIcon, end: true },
     { to: "/fazendas", label: "Fazendas", icon: TractorIcon },
+    { to: "/analises", label: "Análises", icon: FlaskConicalIcon },
     ...(user?.role === "admin" ? [{ to: "/usuarios", label: "Usuários", icon: UsersIcon }] : []),
     { to: "/perfil", label: "Perfil", icon: UserRoundIcon },
   ]
@@ -51,10 +55,11 @@ export function AppShell() {
         <Brand />
         <Separator />
         <nav aria-label="Principal" className="flex flex-1 flex-col gap-1">
-          {items.map(({ to, label, icon: Icon }) => (
+          {items.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}
+              end={end}
               className={({ isActive }) =>
                 cn(
                   "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors [&_svg]:size-4",
@@ -103,10 +108,11 @@ export function AppShell() {
         className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/92 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
       >
         <ul className="grid" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
-          {items.map(({ to, label, icon: Icon }) => (
+          {items.map(({ to, label, icon: Icon, end }) => (
             <li key={to}>
               <NavLink
                 to={to}
+                end={end}
                 className={({ isActive }) =>
                   cn(
                     "flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs font-medium transition-colors [&_svg]:size-5",
