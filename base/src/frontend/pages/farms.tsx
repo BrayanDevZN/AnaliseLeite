@@ -7,6 +7,7 @@ import { ErrorAlert } from "@/components/error-alert"
 import { FarmFormDrawer } from "@/components/farm-form"
 import { FarmThumb } from "@/components/farm-thumb"
 import { ListSkeleton } from "@/components/list-skeleton"
+import { TiltCard } from "@/components/tilt-card"
 import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -39,8 +40,9 @@ export default function FarmsPage() {
         <ul className="flex flex-col gap-3">
           {farms.data.map((farm) => (
             <li key={farm.id}>
+              <TiltCard max={3}>
               <Link to={`/fazendas/${farm.id}`} className="block rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
-                <Card className="transition-colors hover:bg-accent/40 active:bg-accent/60">
+                <Card className="depth transition-colors hover:bg-accent/40 active:bg-accent/60">
                   <CardHeader className="flex flex-row items-center gap-3">
                     <FarmThumb farm={farm} className="size-14" />
                     <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -59,6 +61,7 @@ export default function FarmsPage() {
                   </CardHeader>
                 </Card>
               </Link>
+              </TiltCard>
             </li>
           ))}
         </ul>

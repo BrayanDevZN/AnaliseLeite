@@ -5,7 +5,9 @@ import { AnalysisCard, ApprovalBar } from "@/components/analysis-summary"
 import { EmptyState } from "@/components/empty-state"
 import { ErrorAlert } from "@/components/error-alert"
 import { ProfilePhoto } from "@/components/profile-photo"
+import { MilkOrbit } from "@/components/milk-orbit"
 import { StatCard } from "@/components/stat-card"
+import { TiltCard } from "@/components/tilt-card"
 import { buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -42,8 +44,10 @@ export default function HomePage() {
 
   return (
     <>
-      <Card>
-        <CardContent className="flex items-center gap-4">
+      <TiltCard max={4}>
+      <Card className="depth relative overflow-hidden">
+        <MilkOrbit className="absolute -top-6 -right-10 size-44 opacity-80" />
+        <CardContent className="relative flex items-center gap-4">
           <ProfilePhoto user={user} className="size-20" />
           <div className="flex min-w-0 flex-col gap-0.5">
             <p className="text-sm text-muted-foreground">{greeting()},</p>
@@ -54,6 +58,7 @@ export default function HomePage() {
           </div>
         </CardContent>
       </Card>
+      </TiltCard>
 
       <div className="grid grid-cols-2 gap-3">
         <Link to="/analises/nova" className={cn(buttonVariants({ size: "lg" }))}>

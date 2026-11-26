@@ -1,5 +1,5 @@
 import { FlaskConicalIcon, HouseIcon, LogOutIcon, TractorIcon, UserRoundIcon, UsersIcon, type LucideIcon } from "lucide-react"
-import { NavLink, Outlet, useNavigate } from "react-router"
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router"
 
 import { Brand } from "@/components/brand"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -38,6 +38,7 @@ export function AppShell() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const items = useItems()
+  const location = useLocation()
 
   async function leave() {
     try {
@@ -97,7 +98,7 @@ export function AppShell() {
       </header>
 
       <main className="md:pl-60">
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-5 pb-28 md:px-8 md:py-8 md:pb-10">
+        <div key={location.pathname} className="animate-page-in mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-5 pb-28 md:px-8 md:py-8 md:pb-10">
           <Outlet />
         </div>
       </main>
