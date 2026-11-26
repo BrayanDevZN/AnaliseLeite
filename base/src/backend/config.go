@@ -20,10 +20,19 @@ type Config struct {
 	requiredSecrets []string
 }
 
+// NewConfig segue a logica do config.py do pipeline: antes de ler, tenta carregar o arquivo .env da raiz
+// de base/ (a pasta do go.mod) no ambiente. Se ele nao existir, so as variaveis de ambiente valem.
+// O .env nunca sobrescreve uma variavel que ja existe no ambiente (CI, Docker, terminal), mesmo vazia.
+// Um .env que existe mas esta mal escrito e um erro.
+//
 // NewConfig recebe os nomes das variaveis que devem ser lidas (secrets) e,
 // opcionalmente, os nomes das que sao obrigatorias (requiredSecrets, pode ser nil).
 // Se alguma obrigatoria nao existir, devolve um *MissingSecretsError com o nome de todas as que faltam.
 func NewConfig(secrets []string, requiredSecrets []string) (*Config, error) {
+	if err := loadDotEnv(); err != nil {
+		return nil, err
+	}
+
 	config := &Config{
 		secrets:         unique(secrets),
 		requiredSecrets: unique(requiredSecrets),

@@ -9,4 +9,27 @@ services:
       
       ports:
         - "8000:8000"
-    
+
+    backend:
+      build:
+        context: .
+        dockerfile: Dockerfile.back
+      # as variaveis vem do base/.env (veja o .env.example). Sem o arquivo, o compose segue em frente
+      # (o CI so sobe o pipeline) e o backend reclama da JWT_SECRET ao iniciar.
+      env_file:
+        - path: .env
+          required: false
+      # so o que e do container e nao pode vir do .env, porque la o valor e o da sua maquina:
+      environment:
+        - DATABASE_URL=sqlite:///data/app.db
+        - MODEL_URL=http://pipeline:8000
+      ports:
+        - "${PORT:-8080}:${PORT:-8080}"
+      volumes:
+        - backend_data:/data
+      depends_on:
+        - pipeline
+      restart: unless-stopped
+
+volumes:
+    backend_data:

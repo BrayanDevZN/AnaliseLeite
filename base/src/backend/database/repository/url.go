@@ -41,28 +41,17 @@ func URL(logger *backend.Logger) string {
 	return sqliteURL(path)
 }
 
-// baseDir sobe as pastas a partir da pasta atual ate achar o go.mod (a raiz de base/).
-// Se nao achar, usa a pasta atual.
+// baseDir e a raiz de base/ (a pasta do go.mod). Se nao achar, usa a pasta atual.
 func baseDir() string {
-	start, err := os.Getwd()
-
-	if err != nil {
-		return "."
+	if dir, found := backend.ModuleRoot(); found {
+		return dir
 	}
 
-	for dir := start; ; {
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			return dir
-		}
-
-		parent := filepath.Dir(dir)
-
-		if parent == dir {
-			return start
-		}
-
-		dir = parent
+	if dir, err := os.Getwd(); err == nil {
+		return dir
 	}
+
+	return "."
 }
 
 // sqliteURL monta a URL sqlite:///caminho/do/arquivo.db a partir de um caminho de arquivo.

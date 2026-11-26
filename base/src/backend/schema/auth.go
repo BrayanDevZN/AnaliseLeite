@@ -49,23 +49,32 @@ func (r *LoginRequest) Validate() error {
 	return v.err()
 }
 
-// TokenResponse e a resposta de POST /auth/login.
-type TokenResponse struct {
-	AccessToken string `json:"access_token"`
-	TokenType   string `json:"token_type"`
-
-	// ExpiresIn e em quantos segundos o token vence.
-	ExpiresIn int `json:"expires_in"`
+// SessionResponse e a resposta de POST /auth/login e POST /auth/refresh.
+// Os tokens nunca vao no corpo: vao em cookies HttpOnly. Aqui so vem quanto tempo falta para o
+// token de acesso vencer e quem esta logado.
+type SessionResponse struct {
+	// ExpiresIn e em quantos segundos o token de acesso vence.
+	ExpiresIn int          `json:"expires_in"`
+	User      UserResponse `json:"user"`
 }
 
-// NewTokenResponse monta a resposta de login a partir do token e do tempo de vida dele.
-func NewTokenResponse(token string, ttl time.Duration) TokenResponse {
-	return TokenResponse{AccessToken: token, TokenType: "bearer", ExpiresIn: int(ttl.Seconds())}
+// NewSessionResponse monta a resposta de login a partir do tempo de vida do token e do usuario.
+func NewSessionResponse(ttl time.Duration, user UserResponse) SessionResponse {
+	return SessionResponse{ExpiresIn: int(ttl.Seconds()), User: user}
 }
 
-// AuthRoutes sao as rotas de login e cadastro.
+// MessageResponse e uma resposta so com uma mensagem.
+type MessageResponse struct {
+	Message string `json:"message"`
+}
+
+// AuthRoutes sao as rotas de login, logout, renovacao do token e cadastro.
+// O login e a renovacao devolvem os tokens em cookies HttpOnly (access_token e refresh_token).
 var AuthRoutes = []Route{
 	{Method: http.MethodPost, Path: "/auth/register", Description: "cria uma conta", Public: true, Request: RegisterRequest{}, Response: UserResponse{}},
-	{Method: http.MethodPost, Path: "/auth/login", Description: "entra com email e senha", Public: true, Request: LoginRequest{}, Response: TokenResponse{}},
+	{Method: http.MethodPost, Path: "/auth/login", Description: "entra com email e senha (tokens nos cookies)", Public: true, Request: LoginRequest{}, Response: SessionResponse{}},
+	{Method: http.MethodPost, Path: "/auth/refresh", Description: "troca o refresh token por tokens novos (cookies)", Public: true, Response: SessionResponse{}},
+	{Method: http.MethodPost, Path: "/auth/logout", Description: "sai: invalida o refresh token e limpa os cookies", Public: true, Response: MessageResponse{}},
 	{Method: http.MethodGet, Path: "/me", Description: "dados do usuario logado", Response: UserResponse{}},
+	{Method: http.MethodPatch, Path: "/me", Description: "atualiza o proprio usuario (nao muda o papel)", Request: UpdateUserRequest{}, Response: UserResponse{}},
 }

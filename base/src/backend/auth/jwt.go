@@ -100,6 +100,11 @@ func NewJWT(logger *backend.Logger, ttl time.Duration) (*JWT, error) {
 	}, nil
 }
 
+// TTL devolve o tempo de vida dos tokens criados por este JWT.
+func (j *JWT) TTL() time.Duration {
+	return j.ttl
+}
+
 // SetClock troca o relogio usado para emitir e validar tokens (util em testes).
 func (j *JWT) SetClock(now func() time.Time) {
 	j.now = now
