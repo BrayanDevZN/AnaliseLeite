@@ -31,6 +31,9 @@ export BACKEND_URL="${BACKEND_URL:-http://backend:8080}"
 export BACKEND_URL="${BACKEND_URL%/}"
 BACKEND_HOST="${BACKEND_URL#*://}"
 export BACKEND_HOST="${BACKEND_HOST%%/*}"
+# DNS do container (no Railway e a rede privada, em IPv6): o nginx precisa dele para resolver o backend em tempo de requisicao
+BACKEND_RESOLVER="$(awk '$1=="nameserver"{printf "%s ", ($2 ~ /:/ ? "[" $2 "]" : $2)}' /etc/resolv.conf)"
+export BACKEND_RESOLVER="${BACKEND_RESOLVER:-8.8.8.8 }"
 ENVSH
 
 COPY <<'CONF' /etc/nginx/templates/default.conf.template
@@ -50,7 +53,7 @@ server {
     # O endereco vai numa variavel e e resolvido a cada requisicao (nao na partida): se BACKEND_URL estiver errado
     # ou o backend ainda nao subiu, so a API responde 502 e o site continua no ar, em vez do nginx nao iniciar.
     location /api/ {
-        resolver ${NGINX_LOCAL_RESOLVERS} valid=10s;
+        resolver ${BACKEND_RESOLVER}valid=10s;
         set $backend "${BACKEND_URL}";
         rewrite ^/api/(.*)$ /$1 break;
         proxy_pass $backend;
