@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { PlusIcon } from "lucide-react"
 import { Link } from "react-router"
 
@@ -6,6 +7,7 @@ import { EmptyState } from "@/components/empty-state"
 import { ErrorAlert } from "@/components/error-alert"
 import { ListSkeleton } from "@/components/list-skeleton"
 import { PageHeader } from "@/components/page-header"
+import { ResultFilter, type ResultFilterValue } from "@/components/result-filter"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { formatNumber } from "@/lib/format"
@@ -17,7 +19,16 @@ export default function AnalysesPage() {
   const analyses = useMyAnalyses()
   const farms = useFarms()
 
+  const [filter, setFilter] = useState<ResultFilterValue>("all")
+
   const items = analyses.data?.pages.flatMap((page) => page.items) ?? []
+  // aprovada: só amostras aprovadas; reprovada: pelo menos uma amostra reprovada (um arquivo misto cai em "reprovadas")
+  const visible = items.filter((analysis) => {
+    if (filter === "approved") return analysis.approved > 0 && analysis.rejected === 0
+    if (filter === "rejected") return analysis.rejected > 0
+
+    return true
+  })
   const total = analyses.data?.pages[0]?.total ?? 0
 
   const newButton = (
@@ -60,9 +71,18 @@ export default function AnalysesPage() {
         />
       )}
 
-      {items.length > 0 && (
+      {items.length > 0 && <ResultFilter value={filter} onChange={setFilter} />}
+
+      {items.length > 0 && visible.length === 0 && (
+        <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+          Nenhuma análise {filter === "approved" ? "aprovada" : "reprovada"} entre as carregadas.
+          {analyses.hasNextPage && " Toque em Mostrar mais para procurar nas anteriores."}
+        </p>
+      )}
+
+      {visible.length > 0 && (
         <ul className="flex flex-col gap-3">
-          {items.map((analysis) => (
+          {visible.map((analysis) => (
             <li key={analysis.id}>
               <AnalysisCard analysis={analysis} />
             </li>
