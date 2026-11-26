@@ -1,4 +1,5 @@
-import { FlaskConicalIcon, HouseIcon, LogOutIcon, TractorIcon, UserRoundIcon, UsersIcon, type LucideIcon } from "lucide-react"
+import { FlaskConicalIcon, HouseIcon, LogOutIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, TractorIcon, UserRoundIcon, UsersIcon, type LucideIcon } from "lucide-react"
+import { useState } from "react"
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router"
 
 import { Brand } from "@/components/brand"
@@ -19,6 +20,33 @@ interface Item {
   end?: boolean
   /** A cor do ícone (uma de cada tom da paleta). */
   tone: string
+}
+
+const SIDEBAR_KEY = "analise-leite:sidebar-closed"
+
+/** O menu lateral (computador) pode ser fechado; a escolha fica guardada neste aparelho. */
+function useSidebar() {
+  const [closed, setClosed] = useState(() => {
+    try {
+      return localStorage.getItem(SIDEBAR_KEY) === "1"
+    } catch {
+      return false
+    }
+  })
+
+  function toggle() {
+    setClosed((current) => {
+      try {
+        localStorage.setItem(SIDEBAR_KEY, current ? "0" : "1")
+      } catch {
+        // sem armazenamento (janela privada): só não lembra na próxima visita
+      }
+
+      return !current
+    })
+  }
+
+  return { closed, toggle }
 }
 
 function useItems(): Item[] {
@@ -42,6 +70,7 @@ export function AppShell() {
   const navigate = useNavigate()
   const items = useItems()
   const location = useLocation()
+  const sidebar = useSidebar()
 
   async function leave() {
     try {
@@ -55,8 +84,19 @@ export function AppShell() {
   return (
     <div className="min-h-dvh">
       {/* computador: menu lateral */}
-      <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col gap-4 border-r bg-sidebar p-4 text-sidebar-foreground md:flex">
-        <Brand />
+      <aside
+        inert={sidebar.closed}
+        className={cn(
+          "fixed inset-y-0 left-0 hidden w-60 flex-col gap-4 border-r bg-sidebar p-4 text-sidebar-foreground shadow-xl shadow-foreground/5 backdrop-blur transition-transform duration-300 ease-out md:flex",
+          sidebar.closed && "-translate-x-full",
+        )}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <Brand />
+          <Button variant="ghost" size="icon-sm" aria-label="Fechar o menu" title="Fechar o menu" onClick={sidebar.toggle}>
+            <PanelLeftCloseIcon />
+          </Button>
+        </div>
         <Separator />
         <nav aria-label="Principal" className="flex flex-1 flex-col gap-1">
           {items.map(({ to, label, icon: Icon, end, tone }) => (
@@ -109,7 +149,21 @@ export function AppShell() {
         </div>
       </header>
 
-      <main className="md:pl-60">
+      {/* computador, menu fechado: botão para abrir de novo */}
+      {sidebar.closed && (
+        <Button
+          variant="outline"
+          size="icon"
+          aria-label="Abrir o menu"
+          title="Abrir o menu"
+          onClick={sidebar.toggle}
+          className="fixed top-4 left-4 z-30 hidden bg-background/90 backdrop-blur md:inline-flex"
+        >
+          <PanelLeftOpenIcon />
+        </Button>
+      )}
+
+      <main className={cn("transition-[padding] duration-300 ease-out", sidebar.closed ? "md:pt-12 md:pl-0" : "md:pl-60")}>
         <div key={location.pathname} className="animate-page-in mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-5 pb-28 md:px-8 md:py-8 md:pb-10">
           <Outlet />
         </div>
