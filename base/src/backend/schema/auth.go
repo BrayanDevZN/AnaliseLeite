@@ -22,7 +22,8 @@ func (r *RegisterRequest) Validate() error {
 
 	v.text("name", r.Name, maxNameLength)
 	v.email("email", r.Email)
-	v.password("password", r.Password)
+	v.gmail("email", r.Email)
+	v.newPassword("password", r.Password)
 
 	return v.err()
 }

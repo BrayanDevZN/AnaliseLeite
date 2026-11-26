@@ -263,23 +263,96 @@ func ContentsFromModel(contents []operations.Content) []ContentResponse {
 // Result (uma amostra) ou Rows (um arquivo) trazem a resposta do modelo e so aparecem logo ao criar;
 // o banco nao guarda o resultado.
 type AnalysisResponse struct {
-	ID        int64            `json:"id"`
-	FarmID    int64            `json:"farm_id"`
-	TankID    *int64           `json:"tank_id"`
-	CreatedAt time.Time        `json:"created_at"`
-	Content   *ContentResponse `json:"content,omitempty"`
-	Result    string           `json:"result,omitempty"`
-	Rows      []map[string]any `json:"rows,omitempty"`
+	ID        int64     `json:"id"`
+	FarmID    int64     `json:"farm_id"`
+	FarmName  string    `json:"farm_name,omitempty"`
+	TankID    *int64    `json:"tank_id"`
+	CreatedAt time.Time `json:"created_at"`
+
+	// Kind e "sample" (uma amostra) ou "file" (um arquivo). Model e o modelo usado ("" e o padrao).
+	Kind  string `json:"kind"`
+	Model string `json:"model"`
+
+	// Approved e Rejected sao quantas amostras o modelo aprovou e reprovou. Os dois 0 quer dizer que o resultado
+	// nao foi guardado (analises antigas).
+	Approved int `json:"approved"`
+	Rejected int `json:"rejected"`
+
+	Content *ContentResponse `json:"content,omitempty"`
+
+	// Result ("aprovado" ou "reprovado") vem nas analises de uma amostra. Rows (uma resposta por linha do
+	// arquivo) so vem logo ao criar: o banco guarda so as contagens.
+	Result string           `json:"result,omitempty"`
+	Rows   []map[string]any `json:"rows,omitempty"`
 }
 
 // AnalysisFromModel converte a analise do banco para a resposta.
 func AnalysisFromModel(analysis *operations.Analysis) AnalysisResponse {
-	return AnalysisResponse{
+	response := AnalysisResponse{
 		ID:        analysis.ID,
 		FarmID:    analysis.FarmID,
 		TankID:    analysis.TankID,
 		CreatedAt: analysis.CreatedAt,
+		Kind:      analysis.Kind,
+		Model:     analysis.Model,
+		Approved:  analysis.Approved,
+		Rejected:  analysis.Rejected,
 	}
+
+	if response.Kind == "" {
+		response.Kind = operations.KindSample
+	}
+
+	// uma amostra tem um unico resultado
+	if response.Kind == operations.KindSample {
+		switch {
+		case analysis.Approved == 1 && analysis.Rejected == 0:
+			response.Result = "aprovado"
+
+		case analysis.Rejected == 1 && analysis.Approved == 0:
+			response.Result = "reprovado"
+		}
+	}
+
+	return response
+}
+
+// UserAnalysisFromModel converte uma analise com o nome da fazenda dela.
+func UserAnalysisFromModel(item *operations.UserAnalysis) AnalysisResponse {
+	response := AnalysisFromModel(&item.Analysis)
+
+	response.FarmName = item.FarmName
+
+	return response
+}
+
+// AnalysisListResponse e uma pagina de analises, com o total para paginar.
+type AnalysisListResponse struct {
+	Items []AnalysisResponse `json:"items"`
+	Total int                `json:"total"`
+}
+
+// DayStats e o resumo de um dia (no fuso de quem pediu).
+type DayStats struct {
+	// Date e o dia no formato 2025-09-01.
+	Date     string `json:"date"`
+	Analyses int    `json:"analyses"`
+	Approved int    `json:"approved"`
+	Rejected int    `json:"rejected"`
+}
+
+// StatsResponse e o resumo do usuario para o dashboard (a pagina de inicio).
+type StatsResponse struct {
+	Farms    int `json:"farms"`
+	Tanks    int `json:"tanks"`
+	Analyses int `json:"analyses"`
+
+	// Approved e Rejected somam as amostras (um arquivo conta uma por linha).
+	Approved int `json:"approved"`
+	Rejected int `json:"rejected"`
+
+	// Days sao os ultimos 7 dias, do mais antigo para hoje.
+	Days []DayStats `json:"days"`
 }
 
 // AnalysesFromModel converte uma lista de analises do banco para a resposta (nunca nil).
@@ -297,6 +370,8 @@ func AnalysesFromModel(analyses []operations.Analysis) []AnalysisResponse {
 var AnalysisRoutes = []Route{
 	{Method: http.MethodPost, Path: "/farms/{id}/analyses", Description: "cria uma analise e roda o modelo", Request: CreateAnalysisRequest{}, Response: AnalysisResponse{}},
 	{Method: http.MethodGet, Path: "/farms/{id}/analyses", Description: "lista as analises da fazenda", Response: []AnalysisResponse{}},
+	{Method: http.MethodGet, Path: "/analyses", Description: "lista as analises de todas as fazendas do usuario (?limit=&offset=)", Response: AnalysisListResponse{}},
+	{Method: http.MethodGet, Path: "/stats", Description: "resumo do usuario para o dashboard (?offset= e o fuso em minutos a leste de UTC)", Response: StatsResponse{}},
 	{Method: http.MethodGet, Path: "/analyses/{id}", Description: "busca uma analise", Response: AnalysisResponse{}},
 	{Method: http.MethodGet, Path: "/analyses/{id}/contents", Description: "lista os conteudos da analise", Response: []ContentResponse{}},
 	{Method: http.MethodDelete, Path: "/analyses/{id}", Description: "apaga uma analise"},

@@ -3,10 +3,12 @@ package handles
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"mime"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/BrayanDevZN/AnaliseLeite/base/src/backend/database/repository/operations"
 	"github.com/BrayanDevZN/AnaliseLeite/base/src/backend/schema"
@@ -158,6 +160,24 @@ func (h *Handles) createAnalysis(w http.ResponseWriter, r *http.Request, p *Prin
 		return
 	}
 
+	// guarda o resultado do modelo junto com a analise (para a lista e o dashboard)
+	analysis.Model = request.Model
+
+	if request.File != nil {
+		analysis.Kind = operations.KindFile
+		analysis.Approved, analysis.Rejected = countPredictions(response.Rows)
+	} else {
+		analysis.Kind = operations.KindSample
+
+		switch strings.ToLower(response.Result) {
+		case "aprovado":
+			analysis.Approved = 1
+
+		case "reprovado":
+			analysis.Rejected = 1
+		}
+	}
+
 	if err := h.db.Analyses.Create(r.Context(), analysis); err != nil {
 		h.fail(w, err)
 
@@ -189,6 +209,21 @@ func (h *Handles) createAnalysis(w http.ResponseWriter, r *http.Request, p *Prin
 	created.Rows = response.Rows
 
 	writeJSON(w, http.StatusCreated, created)
+}
+
+// countPredictions conta quantas linhas o modelo aprovou e reprovou (a coluna "predict").
+func countPredictions(rows []map[string]any) (approved, rejected int) {
+	for _, row := range rows {
+		switch strings.ToLower(fmt.Sprint(row["predict"])) {
+		case "aprovado":
+			approved++
+
+		case "reprovado":
+			rejected++
+		}
+	}
+
+	return approved, rejected
 }
 
 // listAnalyses: GET /farms/{id}/analyses.

@@ -29,18 +29,29 @@ export function RequireAuth() {
 export function RequireAdmin() {
   const { user } = useAuth()
 
-  if (user?.role !== "admin") return <Navigate to="/fazendas" replace />
+  if (user?.role !== "admin") return <Navigate to="/" replace />
 
   return <Outlet />
 }
 
-/** Telas de entrar e cadastro: quem já está logado vai direto para as fazendas. */
+/**
+ * Telas de entrar e cadastro: quem já está logado sai delas. Para onde vai: o `next` ou o `from` que a tela
+ * deixou no estado da navegação (ex.: a etapa da foto depois do cadastro, ou a página que pediu o login), senão as fazendas.
+ *
+ * É este guarda que faz a navegação logo depois do login: se a tela também chamasse navigate(), as duas
+ * disputariam e a última a rodar ganharia (a pessoa acabava em /fazendas em vez de /foto).
+ */
 export function PublicOnly() {
   const { user, loading } = useAuth()
+  const location = useLocation()
 
   if (loading) return <Loading />
 
-  if (user) return <Navigate to="/fazendas" replace />
+  if (user) {
+    const state = location.state as { next?: string; from?: string } | null
+
+    return <Navigate to={state?.next ?? state?.from ?? "/"} replace />
+  }
 
   return <Outlet />
 }

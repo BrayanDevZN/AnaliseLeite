@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils"
 export default function NotFoundPage() {
   return (
     <AuthLayout title="Página não encontrada" description="Essa vaca se perdeu do rebanho. O endereço não existe.">
-      <Link to="/fazendas" className={cn(buttonVariants({ size: "lg" }))}>
-        Voltar para as fazendas
+      <Link to="/" className={cn(buttonVariants({ size: "lg" }))}>
+        Voltar para o início
       </Link>
     </AuthLayout>
   )

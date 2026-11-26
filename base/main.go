@@ -29,6 +29,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -243,18 +244,22 @@ func createAdmin(ctx context.Context, logger *backend.Logger, db *database.Manag
 		return nil
 	}
 
-	request := schema.CreateUserRequest{
-		Name:     config.adminName,
-		Email:    config.adminEmail,
-		Password: &config.adminPassword,
-		Role:     schema.RoleAdmin,
+	// O admin da inicializacao vem das variaveis de ambiente (quem opera o servidor), nao de um usuario: por isso
+	// fica fora das regras de cadastro (email @gmail.com e senha forte). So confere o basico.
+	email := strings.ToLower(strings.TrimSpace(config.adminEmail))
+	name := strings.TrimSpace(config.adminName)
+
+	if !strings.Contains(email, "@") || len(config.adminPassword) < 8 || len(config.adminPassword) > 72 {
+		return errors.New("ADMIN_EMAIL and ADMIN_PASSWORD: need a valid email and a password of 8 to 72 characters")
 	}
 
-	admin, err := request.ToModel(hasher.Hash)
+	hashed, err := hasher.Hash(config.adminPassword)
 
 	if err != nil {
-		return fmt.Errorf("ADMIN_EMAIL and ADMIN_PASSWORD: %w", err)
+		return fmt.Errorf("ADMIN_PASSWORD: %w", err)
 	}
+
+	admin := &operations.User{Name: name, Email: email, Password: &hashed, Role: schema.RoleAdmin}
 
 	if _, err := db.Users.GetByEmail(ctx, admin.Email); err == nil {
 		logger.Info("Admin already exists")

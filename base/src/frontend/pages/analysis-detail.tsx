@@ -1,6 +1,7 @@
 import { FileSpreadsheetIcon, Trash2Icon } from "lucide-react"
 import { Link, Navigate, useNavigate, useParams } from "react-router"
 
+import { ResultTotals, SampleResult } from "@/components/analysis-result"
 import { ConfirmDelete } from "@/components/confirm-delete"
 import { ErrorAlert } from "@/components/error-alert"
 import { ListSkeleton } from "@/components/list-skeleton"
@@ -33,10 +34,10 @@ export default function AnalysisDetailPage() {
   const farmId = analysis.data?.farm_id ?? 0
   const farm = useFarm(farmId)
   const tanks = useTanks(farmId)
-  const remove = useDeleteAnalysis(farmId)
+  const remove = useDeleteAnalysis()
 
   if (!Number.isInteger(id) || id <= 0 || (analysis.error instanceof ApiError && analysis.error.status === 404)) {
-    return <Navigate to="/fazendas" replace />
+    return <Navigate to="/analises" replace />
   }
 
   if (analysis.isError) return <ErrorAlert error={analysis.error} title="Não foi possível carregar a análise" />
@@ -49,7 +50,7 @@ export default function AnalysisDetailPage() {
     try {
       await remove.mutateAsync(id)
       notify.success("Análise apagada")
-      navigate(`/fazendas/${farmId}`, { replace: true })
+      navigate("/analises", { replace: true })
     } catch (error) {
       notify.error("Não foi possível apagar", error instanceof Error ? error.message : undefined)
     }
@@ -60,7 +61,7 @@ export default function AnalysisDetailPage() {
       <PageHeader
         title={`Análise #${id}`}
         description={formatDateTime(analysis.data.created_at)}
-        back={`/fazendas/${farmId}`}
+        back="/analises"
         actions={
           <ConfirmDelete
             trigger={
@@ -89,8 +90,28 @@ export default function AnalysisDetailPage() {
               </Badge>
             </>
           )}
+          <span className="text-muted-foreground">Modelo</span>
+          <Badge variant="secondary">{analysis.data.model || "Padrão"}</Badge>
         </CardContent>
       </Card>
+
+      <section className="flex flex-col gap-3" aria-labelledby="result-title">
+        <h2 id="result-title" className="font-heading text-lg font-semibold">
+          Resultado
+        </h2>
+
+        {analysis.data.approved + analysis.data.rejected === 0 ? (
+          <Card size="sm">
+            <CardContent className="text-sm text-muted-foreground">
+              O resultado desta análise não foi guardado: ela foi feita antes de o sistema passar a guardar os resultados.
+            </CardContent>
+          </Card>
+        ) : analysis.data.kind === "file" ? (
+          <ResultTotals approved={analysis.data.approved} rejected={analysis.data.rejected} />
+        ) : (
+          <SampleResult result={analysis.data.result ?? (analysis.data.approved > 0 ? "aprovado" : "reprovado")} />
+        )}
+      </section>
 
       <section className="flex flex-col gap-3" aria-labelledby="contents-title">
         <h2 id="contents-title" className="font-heading text-lg font-semibold">

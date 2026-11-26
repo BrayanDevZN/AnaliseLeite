@@ -1,6 +1,6 @@
 import { useState } from "react"
-import { ChevronRightIcon, FileSpreadsheetIcon, FlaskConicalIcon, MilkIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react"
-import { Link, Navigate, useNavigate, useParams } from "react-router"
+import { MilkIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react"
+import { Navigate, useNavigate, useParams } from "react-router"
 
 import { ConfirmDelete } from "@/components/confirm-delete"
 import { EmptyState } from "@/components/empty-state"
@@ -10,16 +10,14 @@ import { ListSkeleton } from "@/components/list-skeleton"
 import { PageHeader } from "@/components/page-header"
 import { TankFormDrawer } from "@/components/tank-form"
 import { useFarmPhoto } from "@/lib/photos"
-import { Badge } from "@/components/ui/badge"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Button } from "@/components/ui/button"
 import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ApiError } from "@/lib/api"
-import { formatDateTime, formatLiters } from "@/lib/format"
+import { formatLiters } from "@/lib/format"
 import { notify } from "@/lib/notify"
-import { useAnalyses, useDeleteFarm, useDeleteTank, useFarm, useTanks } from "@/lib/queries"
+import { useDeleteFarm, useDeleteTank, useFarm, useTanks } from "@/lib/queries"
 import type { Tank } from "@/lib/types"
-import { cn } from "@/lib/utils"
 
 export default function FarmDetailPage() {
   const params = useParams()
@@ -28,7 +26,6 @@ export default function FarmDetailPage() {
 
   const farm = useFarm(id)
   const tanks = useTanks(id)
-  const analyses = useAnalyses(id)
   const deleteFarm = useDeleteFarm()
   const deleteTank = useDeleteTank(id)
   const cover = useFarmPhoto(farm.data)
@@ -51,8 +48,6 @@ export default function FarmDetailPage() {
     )
   }
 
-  const tankNames = new Map((tanks.data ?? []).map((tank) => [tank.id, tank.type]))
-
   async function removeFarm() {
     try {
       await deleteFarm.mutateAsync(id)
@@ -74,8 +69,6 @@ export default function FarmDetailPage() {
 
   return (
     <>
-      {cover && <img src={cover} alt={`Foto da fazenda ${farm.data.name}`} className="aspect-video w-full rounded-xl border object-cover" />}
-
       <PageHeader
         title={farm.data.name}
         description={`${farm.data.city} - ${farm.data.state}`}
@@ -99,10 +92,7 @@ export default function FarmDetailPage() {
         }
       />
 
-      <Link to={`/fazendas/${id}/analises/nova`} className={cn(buttonVariants({ size: "lg" }))}>
-        <FlaskConicalIcon data-icon="inline-start" />
-        Nova análise do leite
-      </Link>
+      {cover && <img src={cover} alt={`Foto da fazenda ${farm.data.name}`} className="aspect-video w-full rounded-xl border object-cover" />}
 
       <section className="flex flex-col gap-3" aria-labelledby="tanks-title">
         <div className="flex items-center justify-between gap-3">
@@ -146,40 +136,6 @@ export default function FarmDetailPage() {
                   </CardAction>
                 </CardHeader>
               </Card>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="flex flex-col gap-3" aria-labelledby="analyses-title">
-        <h2 id="analyses-title" className="font-heading text-lg font-semibold">
-          Análises
-        </h2>
-
-        {analyses.isPending && <ListSkeleton count={2} />}
-        {analyses.isError && <ErrorAlert error={analyses.error} title="Não foi possível carregar as análises" />}
-        {analyses.data?.length === 0 && <EmptyState title="Nenhuma análise" description="Envie uma amostra ou um arquivo para o modelo dizer se o leite está bom." />}
-
-        <ul className="flex flex-col gap-3">
-          {analyses.data?.map((analysis) => (
-            <li key={analysis.id}>
-              <Link to={`/analises/${analysis.id}`} className="block rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
-                <Card size="sm" className="transition-colors hover:bg-accent/40 active:bg-accent/60">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <FileSpreadsheetIcon className="size-4 text-primary" />
-                      Análise #{analysis.id}
-                    </CardTitle>
-                    <CardDescription className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span>{formatDateTime(analysis.created_at)}</span>
-                      {analysis.tank_id && <Badge variant="outline">{tankNames.get(analysis.tank_id) ?? `Tanque ${analysis.tank_id}`}</Badge>}
-                    </CardDescription>
-                    <CardAction>
-                      <ChevronRightIcon className="size-5 text-muted-foreground" />
-                    </CardAction>
-                  </CardHeader>
-                </Card>
-              </Link>
             </li>
           ))}
         </ul>

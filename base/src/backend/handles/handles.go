@@ -162,6 +162,8 @@ func (h *Handles) handlers() map[string]handler {
 
 		"POST /farms/{id}/analyses":   h.createAnalysis,
 		"GET /farms/{id}/analyses":    h.listAnalyses,
+		"GET /analyses":               h.listMyAnalyses,
+		"GET /stats":                  h.stats,
 		"GET /analyses/{id}":          h.getAnalysis,
 		"GET /analyses/{id}/contents": h.listContents,
 		"DELETE /analyses/{id}":       h.deleteAnalysis,

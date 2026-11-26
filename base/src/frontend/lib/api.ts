@@ -39,6 +39,10 @@ const FIELD_MESSAGES: Record<string, string> = {
   "is too long": "Texto longo demais.",
   "is not a valid email": "Digite um email válido.",
   "must have at least 8 characters": "Use pelo menos 8 caracteres.",
+  "must have an uppercase letter": "Use pelo menos uma letra maiúscula.",
+  "must have a lowercase letter": "Use pelo menos uma letra minúscula.",
+  "must have a number": "Use pelo menos um número.",
+  "must be a gmail.com address": "Use um email @gmail.com.",
   "must have at most 72 bytes": "A senha é longa demais (máximo de 72 caracteres).",
   "must be admin or user": "Escolha administrador ou usuário.",
   "must be a brazilian state abbreviation, like MG": "Escolha um estado válido, como MG.",
@@ -75,7 +79,10 @@ async function toError(response: Response): Promise<ApiError> {
   const fields: Record<string, string> = {}
 
   for (const item of body.errors ?? []) {
-    fields[item.field] = FIELD_MESSAGES[item.message] ?? item.message
+    // um campo pode ter vários problemas (ex.: a senha sem maiúscula e sem número): juntamos todos
+    const text = FIELD_MESSAGES[item.message] ?? item.message
+
+    fields[item.field] = fields[item.field] ? `${fields[item.field]} ${text}` : text
   }
 
   const retry = Number(response.headers.get("Retry-After")) || undefined

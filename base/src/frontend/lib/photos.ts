@@ -50,7 +50,15 @@ export function useMyPhoto() {
 
   return {
     set: useMutation({ mutationFn: (image: Blob) => api.putImage<User>("/me/photo", image), onSuccess: done }),
-    remove: useMutation({ mutationFn: () => api.deleteJson<User>("/me/photo"), onSuccess: done }),
+    remove: useMutation({
+      mutationFn: () => api.deleteJson<User>("/me/photo"),
+      onSuccess: (user) => {
+        // some a foto do cache em vez de pedir a antiga de novo (o servidor responderia 404)
+        client.removeQueries({ queryKey: ["photo"] })
+        setUser(user)
+        client.invalidateQueries({ queryKey: keys.users })
+      },
+    }),
   }
 }
 

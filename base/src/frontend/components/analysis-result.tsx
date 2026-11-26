@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { CircleCheckIcon, CircleXIcon } from "lucide-react"
 
+import { ApprovalBar } from "@/components/analysis-summary"
 import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -43,6 +44,31 @@ function show(value: unknown): string {
   return String(value).replace(/T00:00:00.*$/, "")
 }
 
+/** O resumo de um arquivo: quantas amostras o modelo aprovou e reprovou, e a barra. */
+export function ResultTotals({ approved, rejected }: { approved: number; rejected: number }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="font-heading text-lg">{formatNumber(approved + rejected)} amostras analisadas</CardTitle>
+        <CardDescription>Resumo da resposta do modelo para o arquivo enviado.</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-1 rounded-lg bg-success/10 p-3">
+            <span className="text-2xl font-semibold text-success">{formatNumber(approved)}</span>
+            <span className="text-xs text-muted-foreground">aprovadas</span>
+          </div>
+          <div className="flex flex-col gap-1 rounded-lg bg-destructive/10 p-3">
+            <span className="text-2xl font-semibold text-destructive">{formatNumber(rejected)}</span>
+            <span className="text-xs text-muted-foreground">reprovadas</span>
+          </div>
+        </div>
+        <ApprovalBar approved={approved} rejected={rejected} />
+      </CardContent>
+    </Card>
+  )
+}
+
 /** Resultado de um arquivo: quantas linhas passaram e uma lista (paginada) com a resposta de cada uma. */
 export function RowsResult({ rows }: { rows: Record<string, unknown>[] }) {
   const [visible, setVisible] = useState(PAGE)
@@ -53,22 +79,7 @@ export function RowsResult({ rows }: { rows: Record<string, unknown>[] }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-heading text-lg">{formatNumber(rows.length)} amostras analisadas</CardTitle>
-          <CardDescription>Resumo da resposta do modelo para o arquivo enviado.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-3">
-          <div className="flex flex-col gap-1 rounded-lg bg-success/10 p-3">
-            <span className="text-2xl font-semibold text-success">{formatNumber(approved)}</span>
-            <span className="text-xs text-muted-foreground">aprovadas</span>
-          </div>
-          <div className="flex flex-col gap-1 rounded-lg bg-destructive/10 p-3">
-            <span className="text-2xl font-semibold text-destructive">{formatNumber(rejected)}</span>
-            <span className="text-xs text-muted-foreground">reprovadas</span>
-          </div>
-        </CardContent>
-      </Card>
+      <ResultTotals approved={approved} rejected={rejected} />
 
       <ul className="flex flex-col gap-2">
         {rows.slice(0, visible).map((row, index) => (

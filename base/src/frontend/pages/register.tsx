@@ -1,20 +1,23 @@
 import { useState, type FormEvent } from "react"
-import { Link, useNavigate } from "react-router"
+import { Link, useLocation, useNavigate } from "react-router"
 
 import { AuthLayout } from "@/components/auth-layout"
 import { ErrorAlert } from "@/components/error-alert"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { GoogleButton } from "@/components/google-button"
+import { PasswordChecklist } from "@/components/password-checklist"
 import { SubmitButton } from "@/components/submit-button"
 import { TextField } from "@/components/text-field"
 import { Card, CardContent } from "@/components/ui/card"
 import { FieldGroup, FieldSeparator } from "@/components/ui/field"
 import { ApiError } from "@/lib/api"
 import { useAuth } from "@/lib/auth"
+import { GMAIL_MESSAGE, isGmail, passwordProblem } from "@/lib/validation"
 
 export default function RegisterPage() {
   const { register, login } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
@@ -22,17 +25,35 @@ export default function RegisterPage() {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<ApiError | Error | null>(null)
 
-  const fields = error instanceof ApiError ? error.fields : {}
+  // erros que a própria tela acha antes de enviar (o servidor confere de novo, mas assim a pessoa nem espera)
+  const [local, setLocal] = useState<Record<string, string>>({})
+
+  const fields = { ...(error instanceof ApiError ? error.fields : {}), ...local }
 
   async function submit(event: FormEvent) {
     event.preventDefault()
+
+    const problems: Record<string, string> = {}
+
+    if (!isGmail(email)) problems.email = GMAIL_MESSAGE
+
+    const weak = passwordProblem(password)
+
+    if (weak) problems.password = weak
+
+    setLocal(problems)
+
+    if (Object.keys(problems).length > 0) return
+
     setPending(true)
     setError(null)
 
     try {
       await register(name.trim(), email.trim(), password)
+
+      // diz ao guarda (PublicOnly) para onde levar quando o login terminar: a etapa da foto
+      navigate(location.pathname, { replace: true, state: { next: "/foto" } })
       await login(email.trim(), password)
-      navigate("/foto", { replace: true })
     } catch (caught) {
       setError(caught instanceof Error ? caught : new Error(String(caught)))
     } finally {
@@ -69,6 +90,8 @@ export default function RegisterPage() {
                 inputMode="email"
                 autoComplete="email"
                 autoCapitalize="none"
+                placeholder="voce@gmail.com"
+                description="Só aceitamos emails @gmail.com."
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 error={fields.email}
@@ -79,12 +102,12 @@ export default function RegisterPage() {
                 label="Senha"
                 type="password"
                 autoComplete="new-password"
-                description="No mínimo 8 caracteres."
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 error={fields.password}
                 required
               />
+              <PasswordChecklist value={password} />
 
               <SubmitButton size="lg" pending={pending} pendingLabel="Criando conta">
                 Criar conta

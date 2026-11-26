@@ -41,7 +41,7 @@ export default function FarmsPage() {
             <li key={farm.id}>
               <Link to={`/fazendas/${farm.id}`} className="block rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
                 <Card className="transition-colors hover:bg-accent/40 active:bg-accent/60">
-                  <CardHeader className="flex-row items-center gap-3">
+                  <CardHeader className="flex flex-row items-center gap-3">
                     <FarmThumb farm={farm} className="size-14" />
                     <div className="flex min-w-0 flex-1 flex-col gap-1">
                       <CardTitle className="truncate">{farm.name}</CardTitle>
