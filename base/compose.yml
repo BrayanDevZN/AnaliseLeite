@@ -25,8 +25,6 @@ services:
         - MODEL_URL=http://pipeline:7000
       ports:
         - "${PORT:-8080}:${PORT:-8080}"
-      volumes:
-        - backend_data:/data
       depends_on:
         - pipeline
       restart: unless-stopped
@@ -42,6 +40,3 @@ services:
         # a porta padrao e a mesma do pnpm dev, a que o CORS_ORIGINS do .env ja libera. Se mudar, mude la tambem.
         - "${INTERFACE_PORT:-5173}:8080"
       restart: unless-stopped
-
-volumes:
-    backend_data:

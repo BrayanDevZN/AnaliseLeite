@@ -29,9 +29,7 @@ WORKDIR /app
 
 ENV PORT=8080
 
-# o banco SQLite fica em /data (monte um volume la para os dados sobreviverem ao container)
-VOLUME /data
-
+# o banco SQLite fica em /data, dentro do container (sem volume: os dados somem quando o container e recriado)
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
