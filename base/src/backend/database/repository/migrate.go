@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/BrayanDevZN/AnaliseLeite/base/src/backend/database/repository/operations"
 )
@@ -31,7 +32,8 @@ var tables = []struct {
 		name       TEXT NOT NULL,
 		city       TEXT NOT NULL,
 		state      TEXT NOT NULL,
-		created_at DATETIME NOT NULL
+		created_at DATETIME NOT NULL,
+		photo      BLOB
 	)`},
 	{"tanks", `CREATE TABLE IF NOT EXISTS tanks (
 		id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -56,6 +58,11 @@ var tables = []struct {
 	)`},
 }
 
+// addedColumns sao as colunas que foram acrescentadas depois da primeira versao das tabelas.
+var addedColumns = []string{
+	"ALTER TABLE farms ADD COLUMN photo BLOB",
+}
+
 // Migrate cria e apaga as tabelas do banco.
 type Migrate struct {
 	connection *Connection
@@ -74,6 +81,14 @@ func (m *Migrate) CreateTables(ctx context.Context) error {
 
 			if err := exec(table.create); err != nil {
 				return fmt.Errorf("table %s: %w", table.name, err)
+			}
+		}
+
+		// bancos criados antes de uma coluna existir nao a ganham pelo CREATE TABLE IF NOT EXISTS: cada coluna
+		// nova entra aqui (o SQLite nao tem "ADD COLUMN IF NOT EXISTS", entao o erro de coluna repetida e esperado)
+		for _, column := range addedColumns {
+			if err := exec(column); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+				return fmt.Errorf("add column: %w", err)
 			}
 		}
 

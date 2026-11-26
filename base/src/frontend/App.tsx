@@ -14,6 +14,7 @@ const NewAnalysisPage = lazy(() => import("@/pages/new-analysis"))
 const AnalysisDetailPage = lazy(() => import("@/pages/analysis-detail"))
 const ProfilePage = lazy(() => import("@/pages/profile"))
 const UsersPage = lazy(() => import("@/pages/users"))
+const PhotoPage = lazy(() => import("@/pages/photo"))
 const NotFoundPage = lazy(() => import("@/pages/not-found"))
 
 export function App() {
@@ -26,6 +27,7 @@ export function App() {
         </Route>
 
         <Route element={<RequireAuth />}>
+          <Route path="/foto" element={<PhotoPage />} />
           <Route element={<AppShell />}>
             <Route path="/" element={<Navigate to="/fazendas" replace />} />
             <Route path="/fazendas" element={<FarmsPage />} />

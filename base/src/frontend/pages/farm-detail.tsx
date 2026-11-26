@@ -9,6 +9,7 @@ import { FarmFormDrawer } from "@/components/farm-form"
 import { ListSkeleton } from "@/components/list-skeleton"
 import { PageHeader } from "@/components/page-header"
 import { TankFormDrawer } from "@/components/tank-form"
+import { useFarmPhoto } from "@/lib/photos"
 import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -30,6 +31,7 @@ export default function FarmDetailPage() {
   const analyses = useAnalyses(id)
   const deleteFarm = useDeleteFarm()
   const deleteTank = useDeleteTank(id)
+  const cover = useFarmPhoto(farm.data)
 
   const [editingFarm, setEditingFarm] = useState(false)
   const [tankDrawer, setTankDrawer] = useState<{ open: boolean; tank?: Tank }>({ open: false })
@@ -72,6 +74,8 @@ export default function FarmDetailPage() {
 
   return (
     <>
+      {cover && <img src={cover} alt={`Foto da fazenda ${farm.data.name}`} className="aspect-video w-full rounded-xl border object-cover" />}
+
       <PageHeader
         title={farm.data.name}
         description={`${farm.data.city} - ${farm.data.state}`}

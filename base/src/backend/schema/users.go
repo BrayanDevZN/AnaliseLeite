@@ -9,9 +9,6 @@ import (
 	"github.com/BrayanDevZN/AnaliseLeite/base/src/backend/database/repository/operations"
 )
 
-// maxPhotoSize e o maior tamanho da foto de perfil (em bytes, ja decodificada).
-const maxPhotoSize = 2 << 20
-
 // HashFunc transforma a senha no hash que vai para o banco (o auth.Hasher.Hash).
 type HashFunc func(password string) (string, error)
 
@@ -165,11 +162,14 @@ func (r *UpdateUserRequest) Validate() error {
 		case err != nil:
 			v.add("profile_photo", "must be base64")
 
-		case len(photo) > maxPhotoSize:
-			v.add("profile_photo", "is too big")
-
 		default:
-			r.photo = photo
+			if _, photoErr := ValidatePhoto(photo); photoErr != nil {
+				if validation, ok := AsValidationError(photoErr); ok {
+					v.add("profile_photo", validation.Errors[0].Message)
+				}
+			} else {
+				r.photo = photo
+			}
 		}
 	}
 

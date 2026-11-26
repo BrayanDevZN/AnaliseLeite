@@ -32,6 +32,5 @@ export const GOOGLE_ERRORS: Record<string, string> = {
   invalid_request: "O Google não devolveu os dados do login. Tente de novo.",
   exchange_failed: "Não foi possível confirmar o login com o Google. Tente de novo.",
   email_not_verified: "O email dessa conta do Google não está verificado.",
-  account_exists: "Já existe uma conta com esse email e senha. Entre com o email e a senha.",
   server_error: "Algo deu errado ao entrar com o Google. Tente de novo.",
 }

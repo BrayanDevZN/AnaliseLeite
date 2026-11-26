@@ -23,6 +23,7 @@ export interface Farm {
   name: string
   city: string
   state: string
+  has_photo: boolean
   created_at: string
 }
 

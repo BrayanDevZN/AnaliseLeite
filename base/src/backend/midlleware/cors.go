@@ -87,7 +87,7 @@ func (c *CORS) Handler(next http.Handler) http.Handler {
 		if r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != "" {
 			header.Add("Vary", "Access-Control-Request-Method")
 			header.Add("Vary", "Access-Control-Request-Headers")
-			header.Set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
+			header.Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 			header.Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 			header.Set("Access-Control-Max-Age", "600")
 

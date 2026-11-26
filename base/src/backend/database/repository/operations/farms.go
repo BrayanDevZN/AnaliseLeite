@@ -6,7 +6,8 @@ import (
 	"time"
 )
 
-const farmColumns = "id, user_id, name, city, state, created_at"
+// photo IS NOT NULL diz se a fazenda tem foto sem trazer os bytes dela (a foto so e lida por GetPhoto).
+const farmColumns = "id, user_id, name, city, state, created_at, photo IS NOT NULL"
 
 // Farm e uma linha da tabela farms. UserID e o dono da fazenda.
 type Farm struct {
@@ -16,6 +17,10 @@ type Farm struct {
 	City      string
 	State     string
 	CreatedAt time.Time
+
+	// HasPhoto diz se a fazenda tem foto. Os bytes ficam de fora de proposito: as listas e o cache
+	// ficariam pesados. Use GetPhoto e SetPhoto.
+	HasPhoto bool
 }
 
 // Farms tem as operacoes da tabela farms.
@@ -147,10 +152,48 @@ func (f *Farms) Delete(ctx context.Context, id int64) (err error) {
 	return affected(result)
 }
 
+// GetPhoto devolve os bytes da foto da fazenda, ou nil se ela nao tem foto. ErrNotFound se a fazenda nao existe.
+func (f *Farms) GetPhoto(ctx context.Context, id int64) (photo []byte, err error) {
+	defer begin(f.connection, "get farm %d photo", id)(&err)
+
+	db, err := database(f.connection)
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = db.QueryRowContext(ctx, "SELECT photo FROM farms WHERE id = ?", id).Scan(&photo)
+
+	if err != nil {
+		return nil, notFound(err)
+	}
+
+	return photo, nil
+}
+
+// SetPhoto grava a foto da fazenda. Com photo nil, remove a foto.
+func (f *Farms) SetPhoto(ctx context.Context, id int64, photo []byte) (err error) {
+	defer begin(f.connection, "set farm %d photo", id)(&err)
+
+	db, err := database(f.connection)
+
+	if err != nil {
+		return err
+	}
+
+	result, err := db.ExecContext(ctx, "UPDATE farms SET photo = ? WHERE id = ?", photo, id)
+
+	if err != nil {
+		return fmt.Errorf("set farm photo: %w", err)
+	}
+
+	return affected(result)
+}
+
 func scanFarm(row scanner) (*Farm, error) {
 	var farm Farm
 
-	err := row.Scan(&farm.ID, &farm.UserID, &farm.Name, &farm.City, &farm.State, &farm.CreatedAt)
+	err := row.Scan(&farm.ID, &farm.UserID, &farm.Name, &farm.City, &farm.State, &farm.CreatedAt, &farm.HasPhoto)
 
 	if err != nil {
 		return nil, err

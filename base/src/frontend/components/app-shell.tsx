@@ -3,11 +3,11 @@ import { NavLink, Outlet, useNavigate } from "react-router"
 
 import { Brand } from "@/components/brand"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { UserAvatar } from "@/components/user-avatar"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { useAuth } from "@/lib/auth"
-import { initials } from "@/lib/format"
+import { notify } from "@/lib/notify"
 import { cn } from "@/lib/utils"
 
 interface Item {
@@ -36,8 +36,12 @@ export function AppShell() {
   const items = useItems()
 
   async function leave() {
-    await logout()
-    navigate("/entrar", { replace: true })
+    try {
+      await logout()
+      navigate("/entrar", { replace: true })
+    } catch (error) {
+      notify.error("Não foi possível sair", error instanceof Error ? error.message : undefined)
+    }
   }
 
   return (
@@ -67,9 +71,7 @@ export function AppShell() {
         </nav>
         <Separator />
         <div className="flex items-center gap-2.5">
-          <Avatar>
-            <AvatarFallback>{initials(user?.name ?? "")}</AvatarFallback>
-          </Avatar>
+          {user && <UserAvatar user={user} />}
           <div className="flex min-w-0 flex-1 flex-col leading-tight">
             <span className="truncate text-sm font-medium">{user?.name}</span>
             <span className="truncate text-xs text-muted-foreground">{user?.email}</span>

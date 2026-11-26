@@ -52,7 +52,6 @@ var (
 	errNoGoogle = &httpError{http.StatusServiceUnavailable, "google login is not configured"}
 
 	errGoogleEmailNotVerified = errors.New("google email is not verified")
-	errGoogleAccountExists    = errors.New("an account with this email already uses a password")
 )
 
 // googleAuth e a configuracao do login com o Google.
@@ -275,11 +274,6 @@ func (h *Handles) googleCallback(w http.ResponseWriter, r *http.Request, _ *Prin
 
 		return
 
-	case errors.Is(err, errGoogleAccountExists):
-		h.googleFailure(w, r, "account_exists", nil)
-
-		return
-
 	case err != nil:
 		h.googleFailure(w, r, "server_error", err)
 
@@ -437,9 +431,11 @@ func (c *googleClaims) verified() bool {
 }
 
 // googleUser acha o usuario pelo email ou cria um (sem senha, papel user).
-// Uma conta que ja tem senha NAO entra pelo Google: o cadastro publico nao confirma o email, entao
-// alguem podia ter criado essa conta com o email de outra pessoa, e entrar pelo Google entregaria a conta
-// (com a senha de quem a criou) a pessoa errada.
+// Quem ja tem conta com senha e entra pelo Google com o mesmo email cai na MESMA conta: o Google garante que o
+// email e dele (so entra com email verificado), e a senha continua valendo.
+// Atencao: o cadastro com senha nao confirma o email. Se alguem se cadastrar com o email de outra pessoa, essa
+// pessoa, ao entrar pelo Google, cai numa conta cuja senha quem se cadastrou conhece. O conserto de verdade e
+// confirmar o email no cadastro.
 func (h *Handles) googleUser(ctx context.Context, claims *googleClaims) (*operations.User, error) {
 	if !claims.verified() {
 		return nil, errGoogleEmailNotVerified
@@ -450,10 +446,6 @@ func (h *Handles) googleUser(ctx context.Context, claims *googleClaims) (*operat
 	user, err := h.db.Users.GetByEmail(ctx, email)
 
 	if err == nil {
-		if user.Password != nil {
-			return nil, errGoogleAccountExists
-		}
-
 		return user, nil
 	}
 

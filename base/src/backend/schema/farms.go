@@ -15,6 +15,7 @@ type FarmResponse struct {
 	Name      string    `json:"name"`
 	City      string    `json:"city"`
 	State     string    `json:"state"`
+	HasPhoto  bool      `json:"has_photo"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -26,6 +27,7 @@ func FarmFromModel(farm *operations.Farm) FarmResponse {
 		Name:      farm.Name,
 		City:      farm.City,
 		State:     farm.State,
+		HasPhoto:  farm.HasPhoto,
 		CreatedAt: farm.CreatedAt,
 	}
 }

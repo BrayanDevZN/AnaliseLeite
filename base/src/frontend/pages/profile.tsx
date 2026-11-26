@@ -6,7 +6,7 @@ import { ErrorAlert } from "@/components/error-alert"
 import { PageHeader } from "@/components/page-header"
 import { SubmitButton } from "@/components/submit-button"
 import { TextField } from "@/components/text-field"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { PhotoPicker } from "@/components/photo-picker"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,6 +14,8 @@ import { FieldGroup } from "@/components/ui/field"
 import { api, ApiError } from "@/lib/api"
 import { useAuth } from "@/lib/auth"
 import { initials } from "@/lib/format"
+import { AVATAR_SIDE } from "@/lib/image"
+import { useMyPhoto, useUserPhoto } from "@/lib/photos"
 import { notify } from "@/lib/notify"
 import type { User } from "@/lib/types"
 
@@ -26,6 +28,8 @@ export default function ProfilePage() {
   const [password, setPassword] = useState("")
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<unknown>(null)
+  const photo = useUserPhoto(user)
+  const myPhoto = useMyPhoto()
 
   if (!user) return null
 
@@ -61,8 +65,12 @@ export default function ProfilePage() {
   }
 
   async function leave() {
-    await logout()
-    navigate("/entrar", { replace: true })
+    try {
+      await logout()
+      navigate("/entrar", { replace: true })
+    } catch (error) {
+      notify.error("Não foi possível sair", error instanceof Error ? error.message : undefined)
+    }
   }
 
   return (
@@ -70,13 +78,35 @@ export default function ProfilePage() {
       <PageHeader title="Seu perfil" />
 
       <Card>
-        <CardHeader className="flex-row items-center gap-3">
-          <Avatar size="lg">
-            <AvatarFallback>{initials(user.name)}</AvatarFallback>
-          </Avatar>
-          <div className="flex min-w-0 flex-col gap-1">
-            <CardTitle className="truncate">{user.name}</CardTitle>
-            <CardDescription className="flex flex-wrap items-center gap-2">
+        <CardContent className="flex flex-col items-center gap-4">
+          <PhotoPicker
+            shape="circle"
+            previewUrl={photo}
+            placeholder={<span className="text-3xl font-semibold">{initials(user.name)}</span>}
+            label="Sua foto"
+            busy={myPhoto.set.isPending || myPhoto.remove.isPending}
+            maxSide={AVATAR_SIDE}
+            square
+            onPick={async ({ blob }) => {
+              try {
+                await myPhoto.set.mutateAsync(blob)
+                notify.success("Foto atualizada")
+              } catch (caught) {
+                notify.error("Não foi possível salvar a foto", caught instanceof Error ? caught.message : undefined)
+              }
+            }}
+            onRemove={async () => {
+              try {
+                await myPhoto.remove.mutateAsync()
+                notify.success("Foto removida")
+              } catch (caught) {
+                notify.error("Não foi possível remover a foto", caught instanceof Error ? caught.message : undefined)
+              }
+            }}
+          />
+          <div className="flex min-w-0 flex-col items-center gap-1.5 text-center">
+            <CardTitle className="max-w-full truncate">{user.name}</CardTitle>
+            <CardDescription className="flex flex-wrap items-center justify-center gap-2">
               <span className="truncate">{user.email}</span>
               <Badge variant={user.role === "admin" ? "default" : "secondary"}>
                 {user.role === "admin" && <ShieldCheckIcon data-icon="inline-start" />}
@@ -84,7 +114,7 @@ export default function ProfilePage() {
               </Badge>
             </CardDescription>
           </div>
-        </CardHeader>
+        </CardContent>
       </Card>
 
       <Card>

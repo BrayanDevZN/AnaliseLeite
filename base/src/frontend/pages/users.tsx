@@ -8,7 +8,7 @@ import { ListSkeleton } from "@/components/list-skeleton"
 import { PageHeader } from "@/components/page-header"
 import { SubmitButton } from "@/components/submit-button"
 import { TextField } from "@/components/text-field"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { UserAvatar } from "@/components/user-avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,7 +16,6 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ApiError } from "@/lib/api"
 import { useAuth } from "@/lib/auth"
-import { initials } from "@/lib/format"
 import { notify } from "@/lib/notify"
 import { useCreateUser, useDeleteUser, useUpdateUser, useUsers } from "@/lib/queries"
 import type { User } from "@/lib/types"
@@ -147,9 +146,7 @@ export default function UsersPage() {
           <li key={item.id}>
             <Card size="sm">
               <CardHeader className="flex-row items-center gap-3">
-                <Avatar>
-                  <AvatarFallback>{initials(item.name)}</AvatarFallback>
-                </Avatar>
+                <UserAvatar user={item} />
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <CardTitle className="truncate">{item.name}</CardTitle>
                   <CardDescription className="flex flex-wrap items-center gap-2">

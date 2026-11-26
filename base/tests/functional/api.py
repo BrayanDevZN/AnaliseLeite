@@ -1,5 +1,5 @@
 
-url = "http://0.0.0.0:8000"
+url = "http://0.0.0.0:7000"
 
 import requests
 from pathlib import Path

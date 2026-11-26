@@ -86,3 +86,27 @@ func (x *Farms) Delete(ctx context.Context, id int64) error {
 
 	return nil
 }
+
+// GetPhoto le a foto da fazenda direto do banco. Ela nao passa pelo cache: e grande e e pedida de vez em quando.
+func (x *Farms) GetPhoto(ctx context.Context, id int64) ([]byte, error) {
+	return x.db.GetPhoto(ctx, id)
+}
+
+// SetPhoto grava (ou, com nil, remove) a foto e tira a fazenda do cache, porque o has_photo dela mudou.
+func (x *Farms) SetPhoto(ctx context.Context, id int64, photo []byte) error {
+	old, _ := x.GetByID(ctx, id)
+
+	if err := x.db.SetPhoto(ctx, id, photo); err != nil {
+		return err
+	}
+
+	keys := []string{farmKey(id)}
+
+	if old != nil {
+		keys = append(keys, farmListKey(old.UserID))
+	}
+
+	x.cache.delete(ctx, keys...)
+
+	return nil
+}

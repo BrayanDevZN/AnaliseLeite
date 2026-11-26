@@ -1,15 +1,21 @@
 import { useState, type FormEvent } from "react"
 
+import { TractorIcon } from "lucide-react"
+import { useQueryClient } from "@tanstack/react-query"
+
 import { ErrorAlert } from "@/components/error-alert"
+import { PhotoPicker, type PickedPhoto } from "@/components/photo-picker"
 import { FormDrawer } from "@/components/form-drawer"
 import { SubmitButton } from "@/components/submit-button"
 import { TextField } from "@/components/text-field"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ApiError } from "@/lib/api"
+import { api, ApiError } from "@/lib/api"
 import { STATES } from "@/lib/format"
+import { COVER_SIDE } from "@/lib/image"
+import { useFarmPhoto } from "@/lib/photos"
 import { notify } from "@/lib/notify"
-import { useCreateFarm, useUpdateFarm } from "@/lib/queries"
+import { keys, useCreateFarm, useUpdateFarm } from "@/lib/queries"
 import type { Farm } from "@/lib/types"
 
 interface Props {
@@ -41,6 +47,13 @@ function FarmForm({ farm, onDone, onSaved }: { farm?: Farm; onDone: () => void; 
   const [city, setCity] = useState(farm?.city ?? "")
   const [state, setState] = useState(farm?.state ?? "")
 
+  // a foto escolhida (ou a remoção) só é enviada quando a pessoa salva o formulário
+  const client = useQueryClient()
+  const currentPhoto = useFarmPhoto(farm)
+  const [picked, setPicked] = useState<PickedPhoto | null>(null)
+  const [removed, setRemoved] = useState(false)
+  const preview = picked?.previewUrl ?? (removed ? null : currentPhoto)
+
   const fields = mutation.error instanceof ApiError ? mutation.error.fields : {}
 
   async function submit(event: FormEvent) {
@@ -48,6 +61,23 @@ function FarmForm({ farm, onDone, onSaved }: { farm?: Farm; onDone: () => void; 
 
     try {
       const saved = await mutation.mutateAsync({ name: name.trim(), city: city.trim(), state })
+
+      // a fazenda já está salva; se a foto falhar, avisa e deixa tentar de novo pela edição
+      try {
+        if (picked) {
+          await api.putImage(`/farms/${saved.id}/photo`, picked.blob)
+        } else if (removed && farm?.has_photo) {
+          await api.deleteJson(`/farms/${saved.id}/photo`)
+        }
+
+        await Promise.all([client.invalidateQueries({ queryKey: ["photo"] }), client.invalidateQueries({ queryKey: keys.farms })])
+      } catch (photoError) {
+        notify.error("A fazenda foi salva, mas a foto não", photoError instanceof Error ? photoError.message : undefined)
+        onDone()
+        onSaved?.(saved)
+
+        return
+      }
 
       notify.success(farm ? "Fazenda atualizada" : "Fazenda criada")
       onDone()
@@ -61,6 +91,22 @@ function FarmForm({ farm, onDone, onSaved }: { farm?: Farm; onDone: () => void; 
     <form onSubmit={submit} noValidate>
       <FieldGroup>
         {mutation.error && Object.keys(fields).length === 0 && <ErrorAlert error={mutation.error} />}
+
+        <PhotoPicker
+          shape="rect"
+          previewUrl={preview}
+          placeholder={<TractorIcon className="size-10" />}
+          label="Foto da fazenda"
+          maxSide={COVER_SIDE}
+          onPick={(photo) => {
+            setPicked(photo)
+            setRemoved(false)
+          }}
+          onRemove={() => {
+            setPicked(null)
+            setRemoved(true)
+          }}
+        />
 
         <TextField name="name" label="Nome da fazenda" autoComplete="off" value={name} onChange={(event) => setName(event.target.value)} error={fields.name} required />
         <TextField name="city" label="Cidade" autoComplete="off" value={city} onChange={(event) => setCity(event.target.value)} error={fields.city} required />

@@ -167,6 +167,13 @@ func (h *Handles) handlers() map[string]handler {
 		"DELETE /analyses/{id}":       h.deleteAnalysis,
 
 		"GET /models": h.models,
+
+		"GET /users/{id}/photo":    h.getUserPhoto,
+		"PUT /me/photo":            h.putMyPhoto,
+		"DELETE /me/photo":         h.deleteMyPhoto,
+		"GET /farms/{id}/photo":    h.getFarmPhoto,
+		"PUT /farms/{id}/photo":    h.putFarmPhoto,
+		"DELETE /farms/{id}/photo": h.deleteFarmPhoto,
 	}
 }
 
@@ -233,13 +240,38 @@ func (h *Handles) fail(w http.ResponseWriter, err error) {
 		writeJSON(w, failure.status, schema.ErrorResponse{Detail: failure.detail})
 
 	case isConflict(err):
-		writeJSON(w, errConflict.status, schema.ErrorResponse{Detail: errConflict.detail})
+		response := schema.ErrorResponse{Detail: errConflict.detail}
+
+		if field := conflictField(err); field != "" {
+			response.Errors = []schema.FieldError{{Field: field, Message: "is already registered"}}
+		}
+
+		writeJSON(w, errConflict.status, response)
 
 	default:
 		h.logger.Error("Request failed: %v", err)
 
 		writeJSON(w, http.StatusInternalServerError, schema.ErrorResponse{Detail: "internal error"})
 	}
+}
+
+// conflictField acha o nome do campo de um erro de valor unico do SQLite
+// ("UNIQUE constraint failed: users.email" -> "email"), ou "" se nao conseguir.
+func conflictField(err error) string {
+	_, after, found := strings.Cut(err.Error(), "UNIQUE constraint failed: ")
+
+	if !found {
+		return ""
+	}
+
+	column, _, _ := strings.Cut(after, " ")
+	column = strings.TrimRight(column, ")")
+
+	if _, name, ok := strings.Cut(column, "."); ok {
+		return name
+	}
+
+	return ""
 }
 
 // isConflict diz se o erro do banco e de um valor unico repetido (ex.: email).

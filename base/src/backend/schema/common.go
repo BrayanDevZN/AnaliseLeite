@@ -62,7 +62,7 @@ func (r Route) Pattern() string {
 func Routes() []Route {
 	var all []Route
 
-	for _, group := range [][]Route{HealthRoutes, AuthRoutes, UserRoutes, FarmRoutes, TankRoutes, AnalysisRoutes, ModelRoutes} {
+	for _, group := range [][]Route{HealthRoutes, AuthRoutes, UserRoutes, FarmRoutes, TankRoutes, AnalysisRoutes, ModelRoutes, PhotoRoutes} {
 		all = append(all, group...)
 	}
 

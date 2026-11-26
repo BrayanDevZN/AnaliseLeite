@@ -54,13 +54,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await api.post<User>("/auth/register", { name, email, password })
       },
       async logout() {
-        try {
-          await api.post("/auth/logout")
-        } finally {
-          // limpa tudo, para os dados de um usuário nunca aparecerem para o próximo
-          client.clear()
-          client.setQueryData(ME, null)
-        }
+        // Se o servidor não confirmar, o erro sobe para quem chamou: os cookies são HttpOnly (o navegador só os
+        // apaga quando o servidor manda), então fingir que saiu deixaria a pessoa logada de verdade.
+        await api.post("/auth/logout")
+
+        // Atualiza a consulta de "quem está logado" (a que a tela observa) e apaga todo o resto,
+        // para os dados de um usuário nunca aparecerem para o próximo. Não use client.clear(): ele
+        // joga fora a consulta que a tela observa, e a tela continuaria achando que há usuário.
+        client.setQueryData(ME, null)
+        client.removeQueries({ predicate: (query) => query.queryKey[0] !== ME[0] })
       },
       setUser: (user) => client.setQueryData(ME, user),
     }),

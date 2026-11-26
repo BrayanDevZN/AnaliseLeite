@@ -1,10 +1,11 @@
 import { useState } from "react"
-import { ChevronRightIcon, MapPinIcon, PlusIcon, TractorIcon } from "lucide-react"
+import { ChevronRightIcon, MapPinIcon, PlusIcon } from "lucide-react"
 import { Link } from "react-router"
 
 import { EmptyState } from "@/components/empty-state"
 import { ErrorAlert } from "@/components/error-alert"
 import { FarmFormDrawer } from "@/components/farm-form"
+import { FarmThumb } from "@/components/farm-thumb"
 import { ListSkeleton } from "@/components/list-skeleton"
 import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
@@ -40,18 +41,18 @@ export default function FarmsPage() {
             <li key={farm.id}>
               <Link to={`/fazendas/${farm.id}`} className="block rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
                 <Card className="transition-colors hover:bg-accent/40 active:bg-accent/60">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <TractorIcon className="size-4 text-primary" />
-                      <span className="truncate">{farm.name}</span>
-                    </CardTitle>
-                    <CardDescription className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                      <span className="flex items-center gap-1">
-                        <MapPinIcon className="size-3.5" />
-                        {farm.city} - {farm.state}
-                      </span>
-                      <span>Desde {formatDate(farm.created_at)}</span>
-                    </CardDescription>
+                  <CardHeader className="flex-row items-center gap-3">
+                    <FarmThumb farm={farm} className="size-14" />
+                    <div className="flex min-w-0 flex-1 flex-col gap-1">
+                      <CardTitle className="truncate">{farm.name}</CardTitle>
+                      <CardDescription className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <span className="flex items-center gap-1">
+                          <MapPinIcon className="size-3.5" />
+                          {farm.city} - {farm.state}
+                        </span>
+                        <span>Desde {formatDate(farm.created_at)}</span>
+                      </CardDescription>
+                    </div>
                     <CardAction>
                       <ChevronRightIcon className="size-5 text-muted-foreground" />
                     </CardAction>

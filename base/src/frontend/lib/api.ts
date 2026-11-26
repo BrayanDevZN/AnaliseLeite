@@ -58,6 +58,9 @@ const FIELD_MESSAGES: Record<string, string> = {
   "is not a valid upload or is too big": "O envio é inválido ou grande demais.",
   "could not be read": "Não foi possível ler o arquivo.",
   "is not valid JSON for this route": "Os dados enviados não são válidos.",
+  "is already registered": "Este email já tem uma conta.",
+  "photo is too big": "A foto é grande demais (máximo de 2 MB).",
+  "must be a jpeg, png, webp or gif image": "Use uma foto JPG, PNG, WebP ou GIF.",
 }
 
 async function toError(response: Response): Promise<ApiError> {
@@ -102,9 +105,13 @@ function refreshSession(): Promise<boolean> {
 }
 
 interface Options {
-  method?: "GET" | "POST" | "PATCH" | "DELETE"
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
   body?: unknown
   form?: FormData
+  /** Uma imagem enviada como corpo da requisição (foto de perfil ou de fazenda). */
+  image?: Blob
+  /** Como ler a resposta: JSON (padrão) ou os bytes (para baixar uma foto). */
+  expect?: "json" | "blob"
 }
 
 /** Faz a chamada com os cookies de sessão. Se o token vencer (401), renova uma vez e repete. */
@@ -114,6 +121,9 @@ async function request<T>(path: string, options: Options = {}, retried = false):
 
   if (options.form) {
     body = options.form // o navegador define o Content-Type do multipart, com o boundary
+  } else if (options.image) {
+    headers["Content-Type"] = options.image.type
+    body = options.image
   } else if (options.body !== undefined) {
     headers["Content-Type"] = "application/json"
     body = JSON.stringify(options.body)
@@ -141,6 +151,10 @@ async function request<T>(path: string, options: Options = {}, retried = false):
     return undefined as T
   }
 
+  if (options.expect === "blob") {
+    return (await response.blob()) as T
+  }
+
   return (await response.json()) as T
 }
 
@@ -149,5 +163,11 @@ export const api = {
   post: <T>(path: string, body?: unknown) => request<T>(path, { method: "POST", body }),
   patch: <T>(path: string, body: unknown) => request<T>(path, { method: "PATCH", body }),
   delete: (path: string) => request<void>(path, { method: "DELETE" }),
+  /** Envia uma imagem (PUT) e devolve o JSON da resposta. */
+  putImage: <T>(path: string, image: Blob) => request<T>(path, { method: "PUT", image }),
+  /** Apaga e devolve o JSON da resposta (as rotas de foto devolvem o objeto atualizado). */
+  deleteJson: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+  /** Baixa os bytes de uma foto. */
+  blob: (path: string) => request<Blob>(path, { expect: "blob" }),
   upload: <T>(path: string, form: FormData) => request<T>(path, { method: "POST", form }),
 }

@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router"
 
 import { AuthLayout } from "@/components/auth-layout"
 import { ErrorAlert } from "@/components/error-alert"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { GoogleButton } from "@/components/google-button"
 import { SubmitButton } from "@/components/submit-button"
 import { TextField } from "@/components/text-field"
@@ -31,7 +32,7 @@ export default function RegisterPage() {
     try {
       await register(name.trim(), email.trim(), password)
       await login(email.trim(), password)
-      navigate("/fazendas", { replace: true })
+      navigate("/foto", { replace: true })
     } catch (caught) {
       setError(caught instanceof Error ? caught : new Error(String(caught)))
     } finally {
@@ -46,6 +47,19 @@ export default function RegisterPage() {
           <form onSubmit={submit} noValidate>
             <FieldGroup>
               {error && Object.keys(fields).length === 0 && <ErrorAlert error={error} title="Não foi possível cadastrar" />}
+
+              {error instanceof ApiError && error.status === 409 && (
+                <Alert>
+                  <AlertTitle>Esse email já tem uma conta</AlertTitle>
+                  <AlertDescription>
+                    Não dá para criar outra com o mesmo email.{" "}
+                    <Link to="/entrar" className="font-medium text-primary underline-offset-4 hover:underline">
+                      Entre na sua conta
+                    </Link>{" "}
+                    com a senha ou com o Google.
+                  </AlertDescription>
+                </Alert>
+              )}
 
               <TextField name="name" label="Nome" autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} error={fields.name} required />
               <TextField
