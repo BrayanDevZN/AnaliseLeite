@@ -46,6 +46,7 @@ type Handles struct {
 	refresh  *auth.JWT
 	depends  *Depends
 	revoked  *revocations
+	rows     *rowsCache
 
 	// google e nil se o login com o Google nao esta configurado (veja google.go).
 	google *googleAuth
@@ -94,6 +95,7 @@ func New(logger *backend.Logger, db *database.Manage, requests *backend.Requests
 		refresh:   refresh,
 		depends:   NewDepends(access, db.Users),
 		revoked:   newRevocations(db.Redis),
+		rows:      &rowsCache{},
 		dummyHash: dummy,
 	}, nil
 }
@@ -166,6 +168,7 @@ func (h *Handles) handlers() map[string]handler {
 		"GET /stats":                  h.stats,
 		"GET /analyses/{id}":          h.getAnalysis,
 		"GET /analyses/{id}/contents": h.listContents,
+		"GET /analyses/{id}/rows":     h.analysisRows,
 		"DELETE /analyses/{id}":       h.deleteAnalysis,
 
 		"GET /models": h.models,

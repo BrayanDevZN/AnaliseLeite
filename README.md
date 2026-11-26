@@ -528,6 +528,7 @@ Regras de validação: o email precisa ser `@gmail.com` e a senha precisa ter 8 
 | `GET` | `/stats` | logado | Resumo para o painel de início (`?offset=` é o fuso em minutos a leste de UTC) |
 | `GET`, `DELETE` | `/analyses/{id}` | logado | Busca e apaga uma análise |
 | `GET` | `/analyses/{id}/contents` | logado | Lista o que foi enviado na análise |
+| `GET` | `/analyses/{id}/rows` | logado | Roda o modelo de novo no arquivo guardado e devolve uma linha por amostra (só análises de arquivo) |
 | `GET` | `/models` | logado | Lista os modelos do pipeline |
 
 Cada usuário só enxerga as próprias fazendas, tanques, análises e fotos; um admin também vê as fotos de perfil. As fotos aceitam JPEG, PNG, GIF e WebP (o tipo é conferido pelos bytes, não pelo nome do arquivo) e são servidas com cabeçalhos que impedem que sejam executadas como página.

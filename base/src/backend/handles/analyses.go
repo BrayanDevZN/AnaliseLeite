@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/BrayanDevZN/AnaliseLeite/base/src/backend/database/repository/operations"
 	"github.com/BrayanDevZN/AnaliseLeite/base/src/backend/schema"
@@ -313,5 +315,141 @@ func (h *Handles) deleteAnalysis(w http.ResponseWriter, r *http.Request, p *Prin
 		return
 	}
 
+	h.rows.drop(analysis.ID)
+
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// rowsCacheSize e rowsCacheTTL limitam o cache das respostas do modelo para arquivos ja analisados.
+const (
+	rowsCacheSize = 6
+	rowsCacheTTL  = 15 * time.Minute
+)
+
+type cachedRows struct {
+	rows []map[string]any
+	at   time.Time
+}
+
+// rowsCache guarda por pouco tempo a resposta do modelo para um arquivo, para abrir de novo a mesma analise
+// (ou baixar o relatorio logo depois) nao rodar o modelo outra vez.
+type rowsCache struct {
+	mu    sync.Mutex
+	items map[int64]cachedRows
+}
+
+func (c *rowsCache) get(id int64) ([]map[string]any, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	item, found := c.items[id]
+
+	if !found || time.Since(item.at) > rowsCacheTTL {
+		delete(c.items, id)
+
+		return nil, false
+	}
+
+	return item.rows, true
+}
+
+func (c *rowsCache) put(id int64, rows []map[string]any) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.items == nil {
+		c.items = make(map[int64]cachedRows)
+	}
+
+	// passou do limite: tira o mais antigo
+	if len(c.items) >= rowsCacheSize {
+		var oldest int64
+		var oldestAt time.Time
+
+		for key, item := range c.items {
+			if oldestAt.IsZero() || item.at.Before(oldestAt) {
+				oldest, oldestAt = key, item.at
+			}
+		}
+
+		delete(c.items, oldest)
+	}
+
+	c.items[id] = cachedRows{rows: rows, at: time.Now()}
+}
+
+func (c *rowsCache) drop(id int64) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	delete(c.items, id)
+}
+
+// uploadName da o nome que o pipeline espera para o arquivo guardado: o nome original nao fica no banco,
+// entao ele e deduzido do conteudo (todo parquet comeca com "PAR1").
+func uploadName(data []byte) string {
+	if bytes.HasPrefix(data, []byte("PAR1")) {
+		return "upload.parquet"
+	}
+
+	return "upload.csv"
+}
+
+// analysisRows: GET /analyses/{id}/rows. Roda o modelo de novo no arquivo guardado da analise e devolve uma linha por
+// amostra (com a coluna "predict"), como na resposta de quando a analise foi feita. So para analises de arquivo.
+func (h *Handles) analysisRows(w http.ResponseWriter, r *http.Request, p *Principal) {
+	analysis, err := h.ownedAnalysis(r, p)
+
+	if err != nil {
+		h.fail(w, err)
+
+		return
+	}
+
+	if analysis.Kind != operations.KindFile {
+		h.fail(w, errNotFound)
+
+		return
+	}
+
+	if rows, found := h.rows.get(analysis.ID); found {
+		writeJSON(w, http.StatusOK, rows)
+
+		return
+	}
+
+	if h.requests == nil {
+		h.fail(w, errNoModel)
+
+		return
+	}
+
+	contents, err := h.db.Contents.ListByAnalysis(r.Context(), analysis.ID)
+
+	if err != nil {
+		h.fail(w, err)
+
+		return
+	}
+
+	for i := range contents {
+		if contents[i].File == nil {
+			continue
+		}
+
+		rows, err := h.requests.PredictFile(r.Context(), uploadName(contents[i].File), bytes.NewReader(contents[i].File), analysis.Model)
+
+		if err != nil {
+			h.fail(w, h.modelError(err))
+
+			return
+		}
+
+		h.rows.put(analysis.ID, rows)
+		writeJSON(w, http.StatusOK, rows)
+
+		return
+	}
+
+	h.fail(w, errNotFound)
 }

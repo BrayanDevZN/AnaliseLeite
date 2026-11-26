@@ -374,5 +374,6 @@ var AnalysisRoutes = []Route{
 	{Method: http.MethodGet, Path: "/stats", Description: "resumo do usuario para o dashboard (?offset= e o fuso em minutos a leste de UTC)", Response: StatsResponse{}},
 	{Method: http.MethodGet, Path: "/analyses/{id}", Description: "busca uma analise", Response: AnalysisResponse{}},
 	{Method: http.MethodGet, Path: "/analyses/{id}/contents", Description: "lista os conteudos da analise", Response: []ContentResponse{}},
+	{Method: http.MethodGet, Path: "/analyses/{id}/rows", Description: "roda o modelo de novo no arquivo da analise e devolve uma linha por amostra (so analises de arquivo)", Response: []map[string]any{}},
 	{Method: http.MethodDelete, Path: "/analyses/{id}", Description: "apaga uma analise"},
 }

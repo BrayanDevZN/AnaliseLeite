@@ -1,18 +1,21 @@
-import { FileSpreadsheetIcon, Trash2Icon } from "lucide-react"
+import { useState } from "react"
+import { DownloadIcon, FileSpreadsheetIcon, Trash2Icon } from "lucide-react"
 import { Link, Navigate, useNavigate, useParams } from "react-router"
 
-import { ResultTotals, SampleResult } from "@/components/analysis-result"
+import { ResultTotals, RowsResult, SampleResult } from "@/components/analysis-result"
 import { ConfirmDelete } from "@/components/confirm-delete"
 import { ErrorAlert } from "@/components/error-alert"
 import { ListSkeleton } from "@/components/list-skeleton"
 import { PageHeader } from "@/components/page-header"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ApiError } from "@/lib/api"
 import { formatBytes, formatDateTime, formatNumber } from "@/lib/format"
 import { notify } from "@/lib/notify"
-import { useAnalysis, useContents, useDeleteAnalysis, useFarm, useTanks } from "@/lib/queries"
+import { downloadReport } from "@/lib/report"
+import { useAnalysis, useAnalysisRows, useContents, useDeleteAnalysis, useFarm, useTanks } from "@/lib/queries"
 import type { Content } from "@/lib/types"
 
 const LABELS: [keyof NonNullable<Content["content"]>, string][] = [
@@ -35,6 +38,10 @@ export default function AnalysisDetailPage() {
   const farm = useFarm(farmId)
   const tanks = useTanks(farmId)
   const remove = useDeleteAnalysis()
+  const isFile = analysis.data?.kind === "file"
+  const hasResult = (analysis.data?.approved ?? 0) + (analysis.data?.rejected ?? 0) > 0
+  const rows = useAnalysisRows(id, isFile && hasResult)
+  const [downloading, setDownloading] = useState(false)
 
   if (!Number.isInteger(id) || id <= 0 || (analysis.error instanceof ApiError && analysis.error.status === 404)) {
     return <Navigate to="/analises" replace />
@@ -45,6 +52,18 @@ export default function AnalysisDetailPage() {
   if (analysis.isPending) return <ListSkeleton count={3} />
 
   const tank = tanks.data?.find((item) => item.id === analysis.data.tank_id)
+
+  async function baixarPdf() {
+    setDownloading(true)
+
+    try {
+      await downloadReport({ analysis: analysis.data!, farmName: farm.data?.name ?? `#${farmId}`, tank, contents: contents.data ?? [], rows: rows.data })
+    } catch {
+      notify.error("Não foi possível gerar o PDF", "Tente de novo em instantes.")
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   async function apagar() {
     try {
@@ -63,6 +82,11 @@ export default function AnalysisDetailPage() {
         description={formatDateTime(analysis.data.created_at)}
         back="/analises"
         actions={
+          <>
+            <Button variant="outline" onClick={baixarPdf} disabled={downloading || (isFile && hasResult && rows.isPending)} aria-label="Baixar relatório em PDF">
+              {downloading ? <Spinner data-icon="inline-start" /> : <DownloadIcon data-icon="inline-start" />}
+              PDF
+            </Button>
           <ConfirmDelete
             trigger={
               <Button variant="outline" size="icon" aria-label="Apagar análise">
@@ -73,6 +97,7 @@ export default function AnalysisDetailPage() {
             description="A análise e os dados enviados nela serão apagados."
             onConfirm={apagar}
           />
+          </>
         }
       />
 
@@ -107,7 +132,19 @@ export default function AnalysisDetailPage() {
             </CardContent>
           </Card>
         ) : analysis.data.kind === "file" ? (
-          <ResultTotals approved={analysis.data.approved} rejected={analysis.data.rejected} />
+          rows.data ? (
+            <RowsResult rows={rows.data} />
+          ) : (
+            <>
+              <ResultTotals approved={analysis.data.approved} rejected={analysis.data.rejected} />
+              {rows.isPending && (
+                <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Spinner /> Carregando as amostras do arquivo...
+                </p>
+              )}
+              {rows.isError && <ErrorAlert error={rows.error} title="Não foi possível carregar as amostras" />}
+            </>
+          )
         ) : (
           <SampleResult result={analysis.data.result ?? (analysis.data.approved > 0 ? "aprovado" : "reprovado")} />
         )}

@@ -12,6 +12,7 @@ export const keys = {
   stats: ["stats"] as const,
   analysis: (id: number) => ["analyses", id] as const,
   contents: (id: number) => ["analyses", id, "contents"] as const,
+  rows: (id: number) => ["analyses", id, "rows"] as const,
   models: ["models"] as const,
   users: ["users"] as const,
   user: (id: number) => ["users", id] as const,
@@ -130,6 +131,16 @@ export const useAnalysis = (id: number) =>
 
 export const useContents = (id: number) =>
   useQuery({ queryKey: keys.contents(id), queryFn: () => api.get<Content[]>(`/analyses/${id}/contents`), enabled: id > 0 })
+
+/** As amostras de uma análise de arquivo, com a resposta do modelo (o servidor roda o modelo de novo no arquivo guardado). */
+export const useAnalysisRows = (id: number, enabled: boolean) =>
+  useQuery({
+    queryKey: keys.rows(id),
+    queryFn: () => api.get<Record<string, unknown>[]>(`/analyses/${id}/rows`),
+    enabled: enabled && id > 0,
+    staleTime: 10 * 60_000,
+    retry: false,
+  })
 
 export const useModels = () =>
   useQuery({ queryKey: keys.models, queryFn: () => api.get<ModelsResponse>("/models"), staleTime: 5 * 60_000 })
