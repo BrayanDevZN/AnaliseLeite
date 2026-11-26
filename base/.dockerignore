@@ -1,0 +1,8 @@
+# So o que o Dockerfile.back precisa vai para o build (o resto, como o pipeline e os modelos, e pesado).
+*
+!go.mod
+!go.sum
+!main.go
+!src/backend
+
+.env

@@ -1,5 +1,14 @@
 __pycache__/
 ../.venv/
 *.log
-analiseleite.egg-info/
-src/.env
+*.egg-info/
+.env
+.env.*
+**/.env
+!.env.example
+
+# banco de dados SQLite local (padrao do backend)
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm

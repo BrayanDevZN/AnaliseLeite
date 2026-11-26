@@ -1,0 +1,40 @@
+# --- build: compila o backend em Go num binario estatico (o driver do SQLite e Go puro, sem CGO) ---
+FROM golang:1.26-alpine AS build
+
+WORKDIR /src
+
+# as dependencias primeiro, para o cache do Docker so refazer quando o go.mod mudar
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY main.go ./
+COPY src/backend ./src/backend
+
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/backend .
+
+
+# --- final: so o binario, rodando sem root ---
+FROM alpine:3
+
+RUN apk add --no-cache ca-certificates \
+    && adduser -D -u 10001 app \
+    && mkdir /data \
+    && chown app:app /data
+
+COPY --from=build /out/backend /usr/local/bin/backend
+
+USER app
+
+WORKDIR /app
+
+ENV PORT=8080
+
+# o banco SQLite fica em /data (monte um volume la para os dados sobreviverem ao container)
+VOLUME /data
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD wget -q -O /dev/null "http://127.0.0.1:${PORT}/health" || exit 1
+
+CMD ["backend"]

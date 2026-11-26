@@ -1,0 +1,135 @@
+name: backend
+
+
+on:
+    push:
+        branches:
+            - main
+            - develop
+            - develop-v2
+            - develop-model
+            - develop-system
+
+    pull_request:
+        branches:
+            - main
+            - develop
+            - develop-v2
+            - develop-model
+            - develop-system
+
+jobs:
+
+    build:
+
+        runs-on: ubuntu-latest
+
+        services:
+            redis:
+                image: redis:7
+                ports:
+                    - 6379:6379
+                options: >-
+                    --health-cmd "redis-cli ping"
+                    --health-interval 5s
+                    --health-timeout 5s
+                    --health-retries 10
+
+        # o mesmo environment e a mesma ML_KEY que o pipeline.yaml usa
+        environment: develop_pl
+
+        env:
+            TEST_REDIS_URL: redis://localhost:6379/0
+            ML_KEY: ${{ secrets.ML_KEY }}
+
+        defaults:
+            run:
+                working-directory: base
+
+        steps:
+
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-go@v5
+              with:
+                  go-version-file: base/go.mod
+                  cache-dependency-path: base/go.sum
+
+            - name: check format
+              run: test -z "$(gofmt -l .)"
+
+            - name: analyze code
+              run: go vet ./...
+
+            - name: execute unit config and logs
+              run: go test -race -count=1 -coverpkg=./src/backend/... -skip 'TestHash|TestVerify|TestNewHasher|TestJWT|TestRepository|TestRedis' ./tests/unit/
+
+            - name: execute unit hash
+              run: go test -race -count=1 -coverpkg=./src/backend/... -run 'TestHash|TestVerify|TestNewHasher' ./tests/unit/
+
+            - name: execute unit jwt
+              run: go test -race -count=1 -coverpkg=./src/backend/... -run 'TestJWT' ./tests/unit/
+
+            - name: execute unit repository
+              run: go test -race -count=1 -coverpkg=./src/backend/... -run 'TestRepository' ./tests/unit/
+
+            - name: execute unit redis
+              run: go test -race -count=1 -coverpkg=./src/backend/... -run 'TestRedis' ./tests/unit/
+
+            - name: start pipeline
+              run: |
+                  docker compose -f compose.yml up --build -d pipeline
+                  for _ in $(seq 1 60); do
+                      if curl -fs -H "Authorization: Bearer $ML_KEY" http://localhost:7000/health > /dev/null; then
+                          echo "pipeline is up"
+                          exit 0
+                      fi
+                      sleep 2
+                  done
+                  echo "pipeline did not start"
+                  docker compose -f compose.yml logs
+                  exit 1
+
+            - name: execute integration database, cache and pipeline
+              run: go test -race -count=1 -coverpkg=./src/backend/... ./tests/integration/
+
+            # o backend roda direto no runner (sem docker) e fala com o pipeline que ja esta no ar na porta 7000.
+            # As variaveis abaixo sao so de teste: nao sao segredos de verdade.
+            - name: start backend
+              env:
+                  JWT_SECRET: ci-jwt-secret-only-for-tests-0123456789abcdef
+                  ADMIN_EMAIL: admin@example.com
+                  ADMIN_PASSWORD: ci-admin-password-only-for-tests
+                  COOKIE_INSECURE: "true"
+                  PORT: "8080"
+                  MODEL_URL: http://localhost:7000
+                  DATABASE_URL: sqlite:///tmp/backend-ci.db
+              run: |
+                  go build -o "$RUNNER_TEMP/backend" .
+                  nohup "$RUNNER_TEMP/backend" > "$RUNNER_TEMP/backend.log" 2>&1 &
+                  # espera a porta abrir (sem fazer requisicao, para nao gastar o rate limit do teste)
+                  for _ in $(seq 1 30); do
+                      if (echo > /dev/tcp/127.0.0.1/8080) 2>/dev/null; then
+                          echo "backend is up"
+                          exit 0
+                      fi
+                      sleep 1
+                  done
+                  echo "backend did not start"
+                  cat "$RUNNER_TEMP/backend.log"
+                  exit 1
+
+            - name: execute functional backend
+              env:
+                  PORT: "8080"
+                  ADMIN_EMAIL: admin@example.com
+                  ADMIN_PASSWORD: ci-admin-password-only-for-tests
+              run: go test -count=1 -v ./tests/functional/
+
+            - name: show backend logs
+              if: failure()
+              run: cat "$RUNNER_TEMP/backend.log" || true
+
+            - name: stop pipeline
+              if: always()
+              run: docker compose -f compose.yml down

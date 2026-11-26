@@ -2,11 +2,46 @@ services:
     pipeline:
       build:
         context: ..
-        dockerfile: base/Dockerfile
+        dockerfile: base/Dockerfile.pipe
       environment:
         - ML_KEY=${ML_KEY}
       container_name: pipeline
       
       ports:
-        - "8000:8000"
-    
+        - "7000:7000"
+
+    backend:
+      build:
+        context: .
+        dockerfile: Dockerfile.back
+      # as variaveis vem do base/.env (veja o .env.example). Sem o arquivo, o compose segue em frente
+      # (o CI so sobe o pipeline) e o backend reclama da JWT_SECRET ao iniciar.
+      env_file:
+        - path: .env
+          required: false
+      # so o que e do container e nao pode vir do .env, porque la o valor e o da sua maquina:
+      environment:
+        - DATABASE_URL=sqlite:///data/app.db
+        - MODEL_URL=http://pipeline:7000
+      ports:
+        - "${PORT:-8080}:${PORT:-8080}"
+      volumes:
+        - backend_data:/data
+      depends_on:
+        - pipeline
+      restart: unless-stopped
+
+    interface:
+      build:
+        context: .
+        dockerfile: Dockerfile.interface
+        args:
+          # o endereco do backend como o NAVEGADOR enxerga (fica gravado no JavaScript na hora do build)
+          VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
+      ports:
+        # a porta padrao e a mesma do pnpm dev, a que o CORS_ORIGINS do .env ja libera. Se mudar, mude la tambem.
+        - "${INTERFACE_PORT:-5173}:8080"
+      restart: unless-stopped
+
+volumes:
+    backend_data:

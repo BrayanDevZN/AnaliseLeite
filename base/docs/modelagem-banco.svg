@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 700" width="1080" height="700" font-family="Helvetica,Arial,sans-serif" font-size="13">
+<rect width="1080" height="700" fill="#ffffff"/>
+<text x="40" y="30" font-size="18" font-weight="bold" fill="#1f2937">AnaliseLeite — Modelagem do banco</text>
+<g stroke="#64748b" stroke-width="1.5" fill="none">
+<path d="M320,97 H360 V123 H400"/><path d="M680,97 H720 V123 H760"/><path d="M540,248 V400"/><path d="M900,222 V499 H680"/><path d="M400,447 H360 V473 H320"/></g>
+<g font-size="12" font-weight="bold" fill="#334155">
+<text x="326" y="91">1</text><text x="382" y="117">N</text>
+<text x="686" y="91">1</text><text x="742" y="117">N</text>
+<text x="546" y="268">1</text><text x="546" y="394">N</text>
+<text x="906" y="238">1</text><text x="686" y="493">N (opc.)</text>
+<text x="366" y="441">1</text><text x="324" y="467">N</text></g>
+<g><rect x="40" y="50" width="280" height="224" rx="8" fill="#f8fafc" stroke="#475569" stroke-width="1.5"/>
+<path d="M40,84 V58 a8,8 0 0 1 8,-8 H312 a8,8 0 0 1 8,8 V84 Z" fill="#1e3a5f"/>
+<text x="54" y="72" font-weight="bold" font-size="14" fill="#fff">users</text><text x="54" y="102" fill="#1f2937" font-weight="bold">id</text><text x="190" y="102" fill="#64748b">INTEGER</text><text x="308" y="102" text-anchor="end" font-size="11" font-weight="bold" fill="#b45309">PK</text><text x="54" y="128" fill="#1f2937">name</text><text x="190" y="128" fill="#64748b">TEXT</text><text x="54" y="154" fill="#1f2937">email</text><text x="190" y="154" fill="#64748b">TEXT</text><text x="308" y="154" text-anchor="end" font-size="11" font-weight="bold" fill="#1f2937">UQ</text><text x="54" y="180" fill="#1f2937">password?</text><text x="190" y="180" fill="#64748b">TEXT</text><text x="54" y="206" fill="#1f2937">role</text><text x="190" y="206" fill="#64748b">TEXT</text><text x="54" y="232" fill="#1f2937">profile_photo?</text><text x="190" y="232" fill="#64748b">BLOB</text><text x="54" y="258" fill="#1f2937">created_at</text><text x="190" y="258" fill="#64748b">DATETIME</text></g>
+<g><rect x="400" y="50" width="280" height="198" rx="8" fill="#f8fafc" stroke="#475569" stroke-width="1.5"/>
+<path d="M400,84 V58 a8,8 0 0 1 8,-8 H672 a8,8 0 0 1 8,8 V84 Z" fill="#1e3a5f"/>
+<text x="414" y="72" font-weight="bold" font-size="14" fill="#fff">farms</text><text x="414" y="102" fill="#1f2937" font-weight="bold">id</text><text x="550" y="102" fill="#64748b">INTEGER</text><text x="668" y="102" text-anchor="end" font-size="11" font-weight="bold" fill="#b45309">PK</text><text x="414" y="128" fill="#1f2937">user_id</text><text x="550" y="128" fill="#64748b">INTEGER</text><text x="668" y="128" text-anchor="end" font-size="11" font-weight="bold" fill="#1d4ed8">FK</text><text x="414" y="154" fill="#1f2937">name</text><text x="550" y="154" fill="#64748b">TEXT</text><text x="414" y="180" fill="#1f2937">city</text><text x="550" y="180" fill="#64748b">TEXT</text><text x="414" y="206" fill="#1f2937">state</text><text x="550" y="206" fill="#64748b">TEXT</text><text x="414" y="232" fill="#1f2937">created_at</text><text x="550" y="232" fill="#64748b">DATETIME</text></g>
+<g><rect x="760" y="50" width="280" height="172" rx="8" fill="#f8fafc" stroke="#475569" stroke-width="1.5"/>
+<path d="M760,84 V58 a8,8 0 0 1 8,-8 H1032 a8,8 0 0 1 8,8 V84 Z" fill="#1e3a5f"/>
+<text x="774" y="72" font-weight="bold" font-size="14" fill="#fff">tanks</text><text x="774" y="102" fill="#1f2937" font-weight="bold">id</text><text x="910" y="102" fill="#64748b">INTEGER</text><text x="1028" y="102" text-anchor="end" font-size="11" font-weight="bold" fill="#b45309">PK</text><text x="774" y="128" fill="#1f2937">farm_id</text><text x="910" y="128" fill="#64748b">INTEGER</text><text x="1028" y="128" text-anchor="end" font-size="11" font-weight="bold" fill="#1d4ed8">FK</text><text x="774" y="154" fill="#1f2937">type</text><text x="910" y="154" fill="#64748b">TEXT</text><text x="774" y="180" fill="#1f2937">capacity_liters</text><text x="910" y="180" fill="#64748b">REAL</text><text x="774" y="206" fill="#1f2937">created_at</text><text x="910" y="206" fill="#64748b">DATETIME</text></g>
+<g><rect x="400" y="400" width="280" height="146" rx="8" fill="#f8fafc" stroke="#475569" stroke-width="1.5"/>
+<path d="M400,434 V408 a8,8 0 0 1 8,-8 H672 a8,8 0 0 1 8,8 V434 Z" fill="#1e3a5f"/>
+<text x="414" y="422" font-weight="bold" font-size="14" fill="#fff">analyses</text><text x="414" y="452" fill="#1f2937" font-weight="bold">id</text><text x="550" y="452" fill="#64748b">INTEGER</text><text x="668" y="452" text-anchor="end" font-size="11" font-weight="bold" fill="#b45309">PK</text><text x="414" y="478" fill="#1f2937">farm_id</text><text x="550" y="478" fill="#64748b">INTEGER</text><text x="668" y="478" text-anchor="end" font-size="11" font-weight="bold" fill="#1d4ed8">FK</text><text x="414" y="504" fill="#1f2937">tank_id</text><text x="550" y="504" fill="#64748b">INTEGER</text><text x="668" y="504" text-anchor="end" font-size="11" font-weight="bold" fill="#1d4ed8">FK?</text><text x="414" y="530" fill="#1f2937">created_at</text><text x="550" y="530" fill="#64748b">DATETIME</text></g>
+<g><rect x="40" y="400" width="280" height="172" rx="8" fill="#f8fafc" stroke="#475569" stroke-width="1.5"/>
+<path d="M40,434 V408 a8,8 0 0 1 8,-8 H312 a8,8 0 0 1 8,8 V434 Z" fill="#1e3a5f"/>
+<text x="54" y="422" font-weight="bold" font-size="14" fill="#fff">contents</text><text x="54" y="452" fill="#1f2937" font-weight="bold">id</text><text x="190" y="452" fill="#64748b">INTEGER</text><text x="308" y="452" text-anchor="end" font-size="11" font-weight="bold" fill="#b45309">PK</text><text x="54" y="478" fill="#1f2937">analysis_id</text><text x="190" y="478" fill="#64748b">INTEGER</text><text x="308" y="478" text-anchor="end" font-size="11" font-weight="bold" fill="#1d4ed8">FK</text><text x="54" y="504" fill="#1f2937">content?</text><text x="190" y="504" fill="#64748b">JSON</text><text x="54" y="530" fill="#1f2937">file?</text><text x="190" y="530" fill="#64748b">BLOB</text><text x="54" y="556" fill="#1f2937">created_at</text><text x="190" y="556" fill="#64748b">DATETIME</text></g>
+<g font-size="12" fill="#334155">
+<rect x="40" y="610" width="280" height="64" rx="6" fill="#fffbeb" stroke="#d97706"/>
+<text x="52" y="630" font-weight="bold">Regra de contents</text>
+<text x="52" y="647">CHECK: exatamente um entre content e file</text>
+<text x="52" y="662">preenchido; o outro fica NULL.</text>
+<text x="400" y="630" font-weight="bold">Legenda</text>
+<text x="400" y="648">PK chave primária · FK chave estrangeira · UQ único</text>
+<text x="400" y="664">campo? = opcional (NULL) · FK? = FK opcional</text></g>
+</svg>

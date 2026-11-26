@@ -1,0 +1,62 @@
+# --- build: compila o frontend (React + Vite) em arquivos estaticos ---
+FROM node:24-alpine AS build
+
+WORKDIR /app
+
+RUN npm install -g pnpm@12.21.0
+
+# as dependencias primeiro, para o cache do Docker so refazer quando elas mudarem
+COPY src/frontend/package.json src/frontend/pnpm-lock.yaml src/frontend/pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
+
+COPY src/frontend ./
+
+# o endereco do backend, como o NAVEGADOR enxerga (nao o do container), fica gravado no JavaScript na hora do build
+ARG VITE_API_URL=http://localhost:8080
+ENV VITE_API_URL=$VITE_API_URL
+
+RUN pnpm build
+
+
+# --- final: so os arquivos prontos, num nginx que roda sem root ---
+FROM nginxinc/nginx-unprivileged:alpine
+
+COPY <<'CONF' /etc/nginx/conf.d/default.conf
+server {
+    listen 8080;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    gzip on;
+    gzip_min_length 1024;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+
+    # arquivos com hash no nome (nunca mudam): o navegador guarda por um ano
+    location /assets/ {
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "DENY" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        try_files $uri =404;
+    }
+
+    # o React cuida das rotas (/fazendas, /entrar...): todo endereco que nao e um arquivo entrega o index.html.
+    # O index.html nao pode ficar em cache, para uma versao nova chegar na hora.
+    location / {
+        add_header Cache-Control "no-cache";
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "DENY" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        try_files $uri $uri/ /index.html;
+    }
+}
+CONF
+
+COPY --from=build /app/dist /usr/share/nginx/html
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1

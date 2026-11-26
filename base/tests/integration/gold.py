@@ -2,7 +2,7 @@ try:
 
     import asyncio
 
-    from base.src.etl.gold import Gold
+    from base.src.pipeline.etl.gold import Gold
     instance = Gold()
     df = instance.get_gold()
     print(df)
