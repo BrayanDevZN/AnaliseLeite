@@ -229,13 +229,26 @@
   transform-origin: 50% 0;
 }
 
+/* "reduzir movimento" (muitos PCs de faculdade/escritório vêm assim sem o usuário saber): só a entrada 3D da página para.
+   O fundo e a órbita continuam, em versão suave, para o visual não sumir. */
 @media (prefers-reduced-motion: reduce) {
-  .animate-page-in,
-  .orbit-ring,
-  .orbit-drop,
-  .orbit-core {
+  .animate-page-in {
     animation: none !important;
   }
+
+  .orbit-ring {
+    animation-duration: 60s !important;
+  }
+
+  .orbit-drop {
+    animation-name: drop-float-soft !important;
+    animation-duration: 12s !important;
+  }
+}
+
+@keyframes drop-float-soft {
+  0%, 100% { transform: translate3d(0, 0, var(--z, 0px)); }
+  50% { transform: translate3d(0, -10px, var(--z, 0px)); }
 }
 
 /* ---------- fundo vivo: manchas de cor que derivam devagar e bolhas de leite subindo ---------- */
@@ -256,11 +269,21 @@
   100% { transform: translate3d(var(--dx, 20px), -110vh, 0) scale(1.1); opacity: 0; }
 }
 
+/* versão suave (reduzir movimento ou aparelho fraco): só desliza, sem escalar, em ritmo bem lento */
+@keyframes blob-soft {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(4vw, 3vh, 0); }
+}
+
+@keyframes bubble-soft {
+  0% { transform: translate3d(0, 0, 0); opacity: 0; }
+  12% { opacity: var(--o, 0.5); }
+  100% { transform: translate3d(0, -110vh, 0); opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .ambient-blob,
-  .ambient-bubble {
-    animation: none !important;
-  }
+  .ambient-blob { animation-name: blob-soft !important; animation-duration: 60s !important; }
+  .ambient-bubble { animation-name: bubble-soft !important; animation-duration: 55s !important; }
 }
 
 /* ---------- aparelho fraco (html[data-perf="low"], definido em lib/perf.ts): mantem o visual, tira so o que pesa ---------- */
@@ -271,7 +294,18 @@ html[data-perf="low"] .ambient-bubble:nth-child(n + 9) {
 }
 
 html[data-perf="low"] .ambient-blob {
+  animation-name: blob-soft !important;
   animation-duration: 60s !important;
+}
+
+html[data-perf="low"] .ambient-bubble {
+  animation-name: bubble-soft !important;
+  animation-duration: 55s !important;
+}
+
+html[data-perf="low"] .ambient-blob,
+html[data-perf="low"] .ambient-bubble {
+  will-change: auto !important;
 }
 
 html[data-perf="low"] .ambient-bubble {
