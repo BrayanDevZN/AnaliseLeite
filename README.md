@@ -1,5 +1,10 @@
 <div align="center">
   <h1>🥛 Análise Leite</h1>
+<p align="center">
+  <img src="mascote.png" alt="Mascote" width="20%">
+
+<p align="center">
+  
   <h3>Milk Traceability &amp; Data Intelligence</h3>
   <p>
     <em>From farm collection to smarter, safer dairy decisions.</em>
@@ -30,10 +35,7 @@
     <img src="https://img.shields.io/badge/Docker-ready-2496ED?style=for-the-badge&logo=docker&logoColor=blue" alt="Docker ready">
   </p>
 </div>
-<p align="center">
-  <img src="mascote.png" alt="Mascote" width="30%">
 
-<p align="center">
   <img src="base/assets/analise-leite-flow.gif" alt="Animated milk traceability flow from farm to dairy plant" width="100%">
 </p>
 
