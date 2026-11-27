@@ -10,6 +10,8 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -338,6 +340,18 @@ func decodeImageResult(raw json.RawMessage) (*ImageResult, error) {
 		return &ImageResult{Rows: rows}, nil
 	}
 
+	// o pipeline devolve o DataFrame como esta (colunas -> {indice: valor}) quando a imagem tem varias amostras;
+	// vira uma lista de linhas, na ordem do indice
+	if len(trimmed) > 0 && trimmed[0] == '{' {
+		rows, err := rowsFromColumns(trimmed)
+
+		if err != nil {
+			return nil, fmt.Errorf("decode model service response: %w", err)
+		}
+
+		return &ImageResult{Rows: rows}, nil
+	}
+
 	var text string
 
 	if err := json.Unmarshal(trimmed, &text); err != nil {
@@ -352,6 +366,49 @@ func decodeImageResult(raw json.RawMessage) (*ImageResult, error) {
 	}
 
 	return &ImageResult{Text: text}, nil
+}
+
+// rowsFromColumns converte {"coluna": {"0": valor, "1": valor}} em uma lista de linhas, na ordem numerica do indice.
+func rowsFromColumns(data []byte) ([]map[string]any, error) {
+	var columns map[string]map[string]any
+
+	if err := json.Unmarshal(data, &columns); err != nil {
+		return nil, err
+	}
+
+	positions := map[int]map[string]any{}
+
+	for name, values := range columns {
+		for index, value := range values {
+			position, err := strconv.Atoi(index)
+
+			if err != nil {
+				return nil, fmt.Errorf("unexpected row index %q", index)
+			}
+
+			if positions[position] == nil {
+				positions[position] = map[string]any{}
+			}
+
+			positions[position][name] = value
+		}
+	}
+
+	order := make([]int, 0, len(positions))
+
+	for position := range positions {
+		order = append(order, position)
+	}
+
+	sort.Ints(order)
+
+	rows := make([]map[string]any, 0, len(order))
+
+	for _, position := range order {
+		rows = append(rows, positions[position])
+	}
+
+	return rows, nil
 }
 
 // Models chama GET /model/ e devolve os nomes dos modelos disponiveis.

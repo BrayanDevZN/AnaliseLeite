@@ -524,6 +524,9 @@ func TestRequestsPredictImage(t *testing.T) {
 		case "rows":
 			io.WriteString(w, `[{"ccs":280,"predict":"aprovado"},{"ccs":510,"predict":"reprovado"}]`)
 
+		case "columns":
+			io.WriteString(w, `{"ccs":{"0":280,"1":510,"10":90},"predict":{"0":"aprovado","1":"reprovado","10":"aprovado"}}`)
+
 		case "text":
 			io.WriteString(w, `"Foto de um latao de leite, sem numeros."`)
 
@@ -580,6 +583,14 @@ func TestRequestsPredictImage(t *testing.T) {
 		result, err := requests.PredictImage(ctx, "tabela.png", strings.NewReader("x"), "rows")
 
 		if err != nil || len(result.Rows) != 2 || result.Rows[1]["predict"] != "reprovado" || result.Result != "" {
+			t.Fatalf("resposta errada: %+v %v", result, err)
+		}
+	})
+
+	t.Run("dataframe as columns", func(t *testing.T) {
+		result, err := requests.PredictImage(ctx, "tabela.png", strings.NewReader("x"), "columns")
+
+		if err != nil || len(result.Rows) != 3 || result.Rows[1]["predict"] != "reprovado" || result.Rows[2]["ccs"] != float64(90) {
 			t.Fatalf("resposta errada: %+v %v", result, err)
 		}
 	})

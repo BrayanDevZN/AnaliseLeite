@@ -138,8 +138,16 @@ async function request<T>(path: string, options: Options = {}, retried = false):
 
   let response: Response
 
+  // sem prazo, uma resposta que nunca chega deixa a tela girando para sempre. O envio de imagem leva mais (o pipeline
+  // lê a imagem com um modelo de visão), mas o backend já desiste em ~110 s: passou disso, a resposta não vem mais
   try {
-    response = await fetch(`${API_URL}${path}`, { method: options.method ?? "GET", headers, body, credentials: "include" })
+    response = await fetch(`${API_URL}${path}`, {
+      method: options.method ?? "GET",
+      headers,
+      body,
+      credentials: "include",
+      signal: AbortSignal.timeout(options.form ? 150_000 : 60_000),
+    })
   } catch {
     throw new ApiError(0, MESSAGES[0])
   }
