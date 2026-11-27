@@ -1,0 +1,292 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+    --font-heading: var(--font-sans);
+    --font-sans: 'Geist Variable', sans-serif;
+    --color-coral: var(--coral);
+    --color-lilac: var(--lilac);
+    --color-butter: var(--butter);
+    --color-sky: var(--sky);
+    --color-success-foreground: var(--success-foreground);
+    --color-success: var(--success);
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar: var(--sidebar);
+    --color-chart-5: var(--chart-5);
+    --color-chart-4: var(--chart-4);
+    --color-chart-3: var(--chart-3);
+    --color-chart-2: var(--chart-2);
+    --color-chart-1: var(--chart-1);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --color-foreground: var(--foreground);
+    --color-background: var(--background);
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+    /* Paleta: pasto (verde, ~30%), leite/creme (neutro, ~60%) e manteiga (acento, ~10%).
+       Verde e amarelo-manteiga sao analogos (vizinhos na roda); o ceu (azul) e o coral entram em graficos e alertas. */
+    --background: oklch(0.95 0.05 140);
+    --foreground: oklch(0.24 0.04 160);
+    --card: oklch(0.995 0.008 95);
+    --card-foreground: oklch(0.24 0.04 160);
+    --popover: oklch(0.995 0.008 95);
+    --popover-foreground: oklch(0.24 0.04 160);
+    --primary: oklch(0.47 0.105 160);
+    --primary-foreground: oklch(0.985 0.012 95);
+    --secondary: oklch(0.951 0.03 145);
+    --secondary-foreground: oklch(0.32 0.075 160);
+    --muted: oklch(0.96 0.016 100);
+    --muted-foreground: oklch(0.5 0.035 160);
+    --accent: oklch(0.945 0.055 98);
+    --accent-foreground: oklch(0.34 0.07 85);
+    --destructive: oklch(0.577 0.2 27);
+    --success: oklch(0.55 0.15 142);
+    --success-foreground: oklch(0.985 0.01 142);
+    --border: oklch(0.89 0.026 120);
+    --input: oklch(0.84 0.034 125);
+    --ring: oklch(0.6 0.12 160);
+    --chart-1: oklch(0.55 0.12 160);
+    --chart-2: oklch(0.82 0.15 88);
+    --chart-3: oklch(0.65 0.11 235);
+    --chart-4: oklch(0.68 0.15 35);
+    --chart-5: oklch(0.55 0.1 300);
+    --radius: 0.75rem;
+    --sidebar: oklch(0.975 0.025 120 / 80%);
+    --sidebar-foreground: oklch(0.24 0.04 160);
+    --sidebar-primary: oklch(0.47 0.105 160);
+    --sidebar-primary-foreground: oklch(0.985 0.012 95);
+    --sidebar-accent: oklch(0.925 0.05 120);
+    --sidebar-accent-foreground: oklch(0.3 0.08 160);
+    --sidebar-border: oklch(0.9 0.024 115);
+    --sidebar-ring: oklch(0.6 0.12 160);
+    /* manteiga: brilho da cena 3D e detalhes */
+    --butter: oklch(0.88 0.13 92);
+    --sky: oklch(0.8 0.08 230);
+    /* o degrade do fundo: menta, manteiga e ceu */
+    --bg-a: oklch(0.945 0.065 155);
+    --bg-b: oklch(0.955 0.075 100);
+    --bg-c: oklch(0.94 0.055 225);
+    /* coral (quente) e lilas (o roxo do mascote, bem suave): variedade sem brigar com o verde */
+    --coral: oklch(0.76 0.12 35);
+    --lilac: oklch(0.78 0.09 300);
+}
+
+.dark {
+    --background: oklch(0.175 0.03 165);
+    --foreground: oklch(0.965 0.016 100);
+    --card: oklch(0.215 0.035 165);
+    --card-foreground: oklch(0.965 0.016 100);
+    --popover: oklch(0.235 0.038 165);
+    --popover-foreground: oklch(0.965 0.016 100);
+    --primary: oklch(0.76 0.14 152);
+    --primary-foreground: oklch(0.2 0.045 165);
+    --secondary: oklch(0.285 0.05 165);
+    --secondary-foreground: oklch(0.95 0.025 110);
+    --muted: oklch(0.255 0.036 165);
+    --muted-foreground: oklch(0.74 0.04 140);
+    --accent: oklch(0.34 0.07 95);
+    --accent-foreground: oklch(0.96 0.04 98);
+    --destructive: oklch(0.7 0.17 25);
+    --success: oklch(0.78 0.16 142);
+    --success-foreground: oklch(0.2 0.05 142);
+    --border: oklch(0.8 0.06 140 / 16%);
+    --input: oklch(0.8 0.06 140 / 24%);
+    --ring: oklch(0.72 0.13 152);
+    --chart-1: oklch(0.76 0.14 152);
+    --chart-2: oklch(0.86 0.14 92);
+    --chart-3: oklch(0.74 0.1 235);
+    --chart-4: oklch(0.74 0.14 35);
+    --chart-5: oklch(0.72 0.1 300);
+    --sidebar: oklch(0.2 0.034 165);
+    --sidebar-foreground: oklch(0.965 0.016 100);
+    --sidebar-primary: oklch(0.76 0.14 152);
+    --sidebar-primary-foreground: oklch(0.2 0.045 165);
+    --sidebar-accent: oklch(0.3 0.06 160);
+    --sidebar-accent-foreground: oklch(0.985 0.01 100);
+    --sidebar-border: oklch(0.8 0.06 140 / 16%);
+    --sidebar-ring: oklch(0.72 0.13 152);
+    --butter: oklch(0.84 0.13 92);
+    --sky: oklch(0.7 0.09 230);
+    --bg-a: oklch(0.2 0.045 165);
+    --bg-b: oklch(0.19 0.04 125);
+    --bg-c: oklch(0.2 0.05 225);
+    --coral: oklch(0.72 0.13 35);
+    --lilac: oklch(0.7 0.1 300);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    }
+  body {
+    @apply bg-background text-foreground;
+    }
+  html {
+    @apply font-sans;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    }
+  /* evita o "puxar para atualizar" e o balanco da pagina inteira ao rolar um drawer no celular */
+  body {
+    overscroll-behavior-y: none;
+    }
+}
+
+/* ---------- fundo, profundidade e animacoes 3D ---------- */
+
+@layer base {
+  body {
+    background-image: linear-gradient(135deg, var(--bg-a) 0%, var(--bg-b) 48%, var(--bg-c) 100%);
+    background-attachment: fixed;
+  }
+}
+
+@layer utilities {
+  /* sombra em camadas: da a sensacao de cartao flutuando sobre o fundo */
+  .depth {
+    box-shadow:
+      0 1px 0 0 color-mix(in oklch, white 55%, transparent) inset,
+      0 1px 2px color-mix(in oklch, var(--foreground) 8%, transparent),
+      0 8px 24px -10px color-mix(in oklch, var(--primary) 30%, transparent);
+  }
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: perspective(1000px) translateY(14px) rotateX(5deg);
+  }
+  to {
+    opacity: 1;
+    transform: perspective(1000px) translateY(0) rotateX(0);
+  }
+}
+
+@keyframes orbit-spin {
+  to {
+    transform: rotateX(var(--tilt-x, 62deg)) rotateY(var(--tilt-y, 0deg)) rotateZ(360deg);
+  }
+}
+
+@keyframes orbit-bob {
+  0%,
+  100% {
+    transform: translateZ(var(--z, 0px)) translateY(0);
+  }
+  50% {
+    transform: translateZ(var(--z, 0px)) translateY(-10px);
+  }
+}
+
+@keyframes drop-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, var(--z, 0px)) rotateY(0deg);
+  }
+  50% {
+    transform: translate3d(0, -16px, calc(var(--z, 0px) + 30px)) rotateY(180deg);
+  }
+}
+
+.animate-page-in {
+  animation: page-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: 50% 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-page-in,
+  .orbit-ring,
+  .orbit-drop,
+  .orbit-core {
+    animation: none !important;
+  }
+}
+
+/* ---------- fundo vivo: manchas de cor que derivam devagar e bolhas de leite subindo ---------- */
+
+@keyframes blob-drift-a {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(7vw, 6vh, 0) scale(1.14); }
+}
+
+@keyframes blob-drift-b {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1.05); }
+  50% { transform: translate3d(-8vw, -5vh, 0) scale(0.92); }
+}
+
+@keyframes bubble-rise {
+  0% { transform: translate3d(0, 0, 0) scale(0.6); opacity: 0; }
+  12% { opacity: var(--o, 0.5); }
+  100% { transform: translate3d(var(--dx, 20px), -110vh, 0) scale(1.1); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-blob,
+  .ambient-bubble {
+    animation: none !important;
+  }
+}
+
+/* ---------- transicao de entrar/sair ---------- */
+
+@keyframes transition-spin {
+  0% { transform: perspective(600px) rotateY(-180deg) scale(0.6); opacity: 0; }
+  60% { transform: perspective(600px) rotateY(12deg) scale(1.06); opacity: 1; }
+  100% { transform: perspective(600px) rotateY(0deg) scale(1); opacity: 1; }
+}
+
+@keyframes transition-bar {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(0); }
+}
+
+.transition-spin {
+  animation: transition-spin 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.transition-bar {
+  animation: transition-bar 1.4s ease-in-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .transition-spin,
+  .transition-bar {
+    animation: none !important;
+  }
+}

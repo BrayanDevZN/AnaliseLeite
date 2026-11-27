@@ -1,7 +1,7 @@
 from sklearn.ensemble import RandomForestClassifier
 from base.src.pipeline.etl.interface import LoadData
 from pathlib import Path
-from base.src.pipeline.logs.log import logger
+from base.src.pipeline.log import logger
 import joblib
 import pandas as pd
 class Threshold:
@@ -19,9 +19,9 @@ class Threshold:
 
         logger.info("getting collumns...")
         
-        self.x = self.df[["estado", "cidade", "tanque", "data", "temperatura", "ccs", "cpp"]]
+        self.x = self.df[["estado", "data", "temperatura", "ccs", "cpp"]]
         
-        self.x = pd.get_dummies(columns=["estado", "cidade", "tanque"], dtype=int, data=self.x)
+        self.x = pd.get_dummies(columns=["estado"], dtype=int, data=self.x)
 
         self.x["year"] = self.x["data"].dt.year
         self.x["month"] = self.x["data"].dt.month

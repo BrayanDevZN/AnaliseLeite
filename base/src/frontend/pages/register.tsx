@@ -1,0 +1,133 @@
+import { useState, type FormEvent } from "react"
+import { Link, useLocation, useNavigate } from "react-router"
+
+import { AuthLayout } from "@/components/auth-layout"
+import { ErrorAlert } from "@/components/error-alert"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { GoogleButton } from "@/components/google-button"
+import { PasswordChecklist } from "@/components/password-checklist"
+import { SubmitButton } from "@/components/submit-button"
+import { TextField } from "@/components/text-field"
+import { Card, CardContent } from "@/components/ui/card"
+import { FieldGroup, FieldSeparator } from "@/components/ui/field"
+import { ApiError } from "@/lib/api"
+import { useAuth } from "@/lib/auth"
+import { GMAIL_MESSAGE, isGmail, passwordProblem } from "@/lib/validation"
+
+export default function RegisterPage() {
+  const { register, login } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<ApiError | Error | null>(null)
+
+  // erros que a própria tela acha antes de enviar (o servidor confere de novo, mas assim a pessoa nem espera)
+  const [local, setLocal] = useState<Record<string, string>>({})
+
+  const fields = { ...(error instanceof ApiError ? error.fields : {}), ...local }
+
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+
+    const problems: Record<string, string> = {}
+
+    if (!isGmail(email)) problems.email = GMAIL_MESSAGE
+
+    const weak = passwordProblem(password)
+
+    if (weak) problems.password = weak
+
+    setLocal(problems)
+
+    if (Object.keys(problems).length > 0) return
+
+    setPending(true)
+    setError(null)
+
+    try {
+      await register(name.trim(), email.trim(), password)
+
+      // diz ao guarda (PublicOnly) para onde levar quando o login terminar: a etapa da foto
+      navigate(location.pathname, { replace: true, state: { next: "/foto" } })
+      await login(email.trim(), password)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught : new Error(String(caught)))
+    } finally {
+      setPending(false)
+    }
+  }
+
+  return (
+    <AuthLayout title="Crie sua conta" description="Leva menos de um minuto.">
+      <Card className="w-full">
+        <CardContent>
+          <form onSubmit={submit} noValidate>
+            <FieldGroup>
+              {error && Object.keys(fields).length === 0 && <ErrorAlert error={error} title="Não foi possível cadastrar" />}
+
+              {error instanceof ApiError && error.status === 409 && (
+                <Alert>
+                  <AlertTitle>Esse email já tem uma conta</AlertTitle>
+                  <AlertDescription>
+                    Não dá para criar outra com o mesmo email.{" "}
+                    <Link to="/entrar" className="font-medium text-primary underline-offset-4 hover:underline">
+                      Entre na sua conta
+                    </Link>{" "}
+                    com a senha ou com o Google.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <TextField name="name" label="Nome" autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} error={fields.name} required />
+              <TextField
+                name="email"
+                label="Email"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                autoCapitalize="none"
+                placeholder="voce@gmail.com"
+                description="Só aceitamos emails @gmail.com."
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                error={fields.email}
+                required
+              />
+              <TextField
+                name="password"
+                label="Senha"
+                type="password"
+                autoComplete="new-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                error={fields.password}
+                required
+              />
+              <PasswordChecklist value={password} />
+
+              <SubmitButton size="lg" pending={pending} pendingLabel="Criando conta">
+                Criar conta
+              </SubmitButton>
+
+              <FieldSeparator>ou</FieldSeparator>
+
+              {/* na primeira vez, entrar com o Google já cria a conta: não precisa preencher nada */}
+              <GoogleButton>Cadastrar com o Google</GoogleButton>
+            </FieldGroup>
+          </form>
+        </CardContent>
+      </Card>
+
+      <p className="text-sm text-muted-foreground">
+        Já tem conta?{" "}
+        <Link to="/entrar" className="font-medium text-primary underline-offset-4 hover:underline">
+          Entrar
+        </Link>
+      </p>
+    </AuthLayout>
+  )
+}

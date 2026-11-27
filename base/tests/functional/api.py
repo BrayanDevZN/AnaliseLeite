@@ -1,9 +1,10 @@
 
-url = "http://0.0.0.0:8000"
+url = "http://0.0.0.0:7000"
 
 import requests
 from pathlib import Path
-from base.src.pipeline.application.config import API_KEY
+from base.src.pipeline.config import SETTINGS
+API_KEY = SETTINGS["ML_KEY"]
 header = {"Authorization": f"Bearer {API_KEY}"}
 response = requests.get(url=url + "/pipeline", headers=header)
 import pandas as pd
@@ -32,9 +33,7 @@ payload = {
     "state": row["estado"],
     "data": str(row["data"]),
     "ccs": float(row["ccs"]),
-    "cpp": float(row["cpp"]),
-    "cidade": row["cidade"],
-    "tanque": row["tanque"]
+    "cpp": float(row["cpp"])
 }
 
 for model in models:

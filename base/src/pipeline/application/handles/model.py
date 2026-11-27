@@ -2,9 +2,10 @@ from fastapi import APIRouter, HTTPException, UploadFile, File
 from base.src.pipeline.ml.inference import ModelInference
 router_model = APIRouter(prefix="/model", tags=["model"])
 import pandas as pd
-
 from base.src.pipeline.application.schema import SchemaResponse
 import io
+from base.src.pipeline.agent.response import Agent
+import base64
 @router_model.post("/")
 async def response(data: SchemaResponse, model:str|None=None):
 
@@ -13,11 +14,9 @@ async def response(data: SchemaResponse, model:str|None=None):
 
         response = instance.response(
             temperatura=data.temperature,
-            tanque=data.tanque,
             data=data.data,
             ccs=data.ccs,
             cpp=data.cpp,
-            cidade=data.cidade,
             estado=data.state
         )
 
@@ -69,5 +68,24 @@ async def response_models():
     return instance.get_models()
 
 
+@router_model.post("/image")
+async def response_image(image:UploadFile = File(...), model:str|None=None):
+
+    instance = Agent(model=model)
+    image = await image.read()
+   
+    response = await instance.response_image(image=image)
+
+    if response is None:
+
+        raise HTTPException(
+            status_code=409,
+            detail=f"Invalid image"
+        )
+
+    return response
+
+
+    
 
     

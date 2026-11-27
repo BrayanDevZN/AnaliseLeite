@@ -1,0 +1,6 @@
+# Segredos nao entram na imagem do pipeline: a ML_KEY chega pelo ambiente (compose).
+**/.env
+**/.env.*
+
+# O frontend (em src/frontend) nao faz parte da imagem do pipeline, e o node_modules dele e enorme.
+base/src/frontend

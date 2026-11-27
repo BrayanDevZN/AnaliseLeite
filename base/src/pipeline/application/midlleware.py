@@ -1,6 +1,6 @@
 #valida se o usuario pode executar a rota ou não
-from base.src.pipeline.logs.log import logger 
-from .config import API_KEY
+from base.src.pipeline.log import logger 
+from ..config import SETTINGS
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi import Request,  FastAPI
 from fastapi.responses import JSONResponse
@@ -42,7 +42,7 @@ class Midlleware(BaseHTTPMiddleware):
     #Valida se a chave é igual
     def _valid(self) -> dict|None:
 
-        if self.key != API_KEY:
+        if self.key != SETTINGS["ML_KEY"]:
 
             status = 401
             content = {"detail": f"Invalid credential"}

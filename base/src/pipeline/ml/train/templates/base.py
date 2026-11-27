@@ -4,7 +4,7 @@ import json
 from pathlib import Path 
 import pandas as pd
 from datetime import timezone, datetime
-from base.src.pipeline.logs.log import logger
+from base.src.pipeline.log import logger
 from typing import Any
 class BaseTemplate:
 

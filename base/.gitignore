@@ -5,3 +5,10 @@ __pycache__/
 .env
 .env.*
 **/.env
+!.env.example
+
+# banco de dados SQLite local (padrao do backend)
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm

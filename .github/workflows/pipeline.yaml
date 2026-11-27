@@ -26,6 +26,9 @@ jobs:
 
         env:
           ML_KEY: ${{secrets.ML_KEY}}
+          BASE_URL: ${{secrets.BASE_URL}}
+          MODEL: ${{secrets.MODEL}}
+          API_KEY: ${{secrets.API_KEY}}
 
        
 
@@ -38,7 +41,7 @@ jobs:
 
             - name: run docker
               run: |
-               docker compose -f base/compose.yml up --build -d
+               docker compose -f base/compose.yml up --build -d pipeline
                sleep 10
 
             - name: install dependences
