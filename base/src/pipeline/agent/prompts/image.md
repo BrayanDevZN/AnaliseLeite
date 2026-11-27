@@ -104,7 +104,7 @@ Apply the rules in order. Stop at the first one that matches.
 
 **When:** the analysis is not feasible AND there is no relevant information at all. For example:
 - the image is blank, corrupted, too blurry or too dark to read;
-- the image has nothing to do with milk, dairy, farms or lab results (a selfie, a landscape, an unrelated document);
+- the image has nothing to do with milk, dairy, farms or lab results (a selfie, a landscape, an unrelated document, a photo of a pet, a person, an object or any animal outside a dairy context);
 - it is about milk, but contains nothing you can use or analyze.
 
 **Return:**
@@ -124,7 +124,7 @@ Apply the rules in order. Stop at the first one that matches.
 
 ## Rule 3: no field found, but the image is relevant
 
-**When:** none of the six fields could be extracted for any sample, but the image still carries useful information about milk quality or traceability. For example:
+**When:** none of the six fields could be extracted for any sample, but the image still carries useful information about milk quality or traceability. Use this rule ONLY when the image is clearly about milk, dairy or a milk lab document. If the image is about anything else, use Rule 1 instead, even though no field was found. For example:
 - a photo of a milk sample, a tank or a collection scene;
 - a note with qualitative remarks;
 - a report with other measurements (fat, protein, lactose, acidity, antibiotic residue test).
@@ -154,6 +154,8 @@ Do not add comments, markdown, code fences or any text outside the structured re
 
 Examples are described in words on purpose.
 
+They only show the format. Never copy a value, a place or a date from an example: report only what is visible in the image. If a field is not visible, it is `null`. If no field at all is visible, follow Rule 3 of the decision rules (type `"text"`); never return an entry whose fields are all `null`.
+
 | Image                                                                                                            | Result                                                                                                                                                                                                                  |
 |------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Lab report with one sample: "CCS 320.000", "CPP 45.000", "Temp 4,2 C", dated 12/11/2026, farm in Divinópolis - MG | `valid` true, `type` "analytic", `content` is a list with 1 entry: `cpp` 45000, `ccs` 320000, `temperature` 4.2, `date` 2026-11-12, `state` "MG", `city` "Divinópolis"                                                  |
@@ -161,6 +163,6 @@ Examples are described in words on purpose.
 | Two handwritten cards on a table, one saying "4 C" and the other saying "7 C"                                    | `valid` true, `type` "analytic", `content` is a list with 2 entries: `temperature` 4.0 and `temperature` 7.0, all other fields `null`                                                                                   |
 | Lab report with the headers "CCS (x1000 cél/mL)" and "CPP (x1000 UFC/mL)" and the values 320 and 45                 | `valid` true, `type` "analytic", `content` is a list with 1 entry: `ccs` 320000 and `cpp` 45000 (thousands unit, so multiplied by 1000)                                                                                |
 | Note with "CCS 300" and "CPP 80" and no unit anywhere                                                            | `valid` true, `type` "analytic", `content` is a list with 1 entry: `ccs` 300000 and `cpp` 80000 (short numbers without unit are in thousands)                                                                           |
-| Tank display showing only "5.1 C"                                                                                | `valid` true, `type` "analytic", `content` is a list with 1 entry: `temperature` 5.1, all other fields `null`                                                                                                           |
+| Tank display showing only "6.8 C"                                                                                | `valid` true, `type` "analytic", `content` is a list with 1 entry: `temperature` 6.8, all other fields `null`                                                                                                           |
 | Milk can with a handwritten note "looked sour, strange smell", no numbers                                        | `valid` true, `type` "text", `content` is your short analysis and the data that is missing                                                                                                                              |
 | Photo of a dog on a couch                                                                                        | `valid` false, `type` "text", `content` says the image is not related to milk quality                                                                                                                                   |

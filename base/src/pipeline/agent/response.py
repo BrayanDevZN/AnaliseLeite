@@ -73,7 +73,7 @@ def log_model(func):
 
 class Agent:
 
-    def __init__(self):
+    def __init__(self, model:str|None=None)->None:
 
         self.llm = ChatOpenAI(
             base_url=SETTINGS["BASE_URL"],
@@ -81,7 +81,22 @@ class Agent:
             model=SETTINGS["MODEL"], 
             max_completion_tokens=800
         )
-        self.model = ModelInference()
+        self.model = ModelInference(model=model)
+
+
+    #Segunda chamada, sem saida estruturada: analise em texto do que a imagem mostra
+    async def _describe(self, img:str) -> str:
+
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", PROMPTS["text"]),
+                ("human", [{"type": "image_url", "image_url": {"url": "data:image/jpeg;base64,{img}"}}])
+            ]
+        )
+
+        answer = await (prompt | self.llm).ainvoke({"img": img})
+
+        return str(answer.content).strip()
 
 
     @log_model
@@ -112,8 +127,16 @@ class Agent:
         if response.valid:
             content = response.content
            
-            if response.type == "analytic":
-            
+            if response.type == "analytic" and not isinstance(content, str):
+
+                #Modelos pequenos as vezes devolvem amostras sem nenhum numero util; essas nao entram na previsao
+                content = [item for item in content if any(value is not None
+                                                           for value in (item.ccs, item.cpp, item.temperature))]
+
+                #Sem nenhum numero util nao ha o que prever: a resposta passa a ser uma analise em texto
+                if not content:
+                    logger.warning("No usable parameters found, generating a text analysis instead")
+                    return await self._describe(img)
 
                 if len(content) >1:
                     content = pd.DataFrame([item.model_dump() for item in content])
