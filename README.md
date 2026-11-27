@@ -1,5 +1,10 @@
 <div align="center">
   <h1>🥛 Análise Leite</h1>
+<p align="center">
+  <img src="mascote.png" alt="Mascote" width="20%">
+
+<p align="center">
+  
   <h3>Milk Traceability &amp; Data Intelligence</h3>
   <p>
     <em>From farm collection to smarter, safer dairy decisions.</em>
@@ -31,7 +36,6 @@
   </p>
 </div>
 
-<p align="center">
   <img src="base/assets/analise-leite-flow.gif" alt="Animated milk traceability flow from farm to dairy plant" width="100%">
 </p>
 
