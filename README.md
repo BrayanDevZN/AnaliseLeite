@@ -30,6 +30,8 @@
     <img src="https://img.shields.io/badge/Docker-ready-2496ED?style=for-the-badge&logo=docker&logoColor=blue" alt="Docker ready">
   </p>
 </div>
+<p align="center">
+  <img src="mascote.png" alt="Mascote" width="30%">
 
 <p align="center">
   <img src="base/assets/analise-leite-flow.gif" alt="Animated milk traceability flow from farm to dairy plant" width="100%">
