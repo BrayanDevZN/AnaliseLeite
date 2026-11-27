@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { CircleCheckIcon, CircleXIcon } from "lucide-react"
 
 import { ApprovalBar } from "@/components/analysis-summary"
@@ -6,7 +6,7 @@ import { ResultFilter, type ResultFilterValue } from "@/components/result-filter
 import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { formatNumber } from "@/lib/format"
+import { formatBytes, formatNumber } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 /** Resultado de uma amostra: um selo grande e fácil de ler no celular. */
@@ -23,6 +23,36 @@ export function SampleResult({ result }: { result: string }) {
           {approved ? "O modelo não encontrou sinais de problema nesta amostra." : "O modelo encontrou sinais de problema nesta amostra. Vale uma conferência no laboratório."}
         </CardDescription>
       </CardHeader>
+    </Card>
+  )
+}
+
+/** A imagem que foi enviada, mostrada de novo junto do resultado (a pré-visualização é feita no próprio navegador). */
+export function ImagePreview({ file }: { file: File }) {
+  const [url, setUrl] = useState("")
+
+  // lê o arquivo como data URL (sem object URL para revogar, e funciona com o StrictMode do React)
+  useEffect(() => {
+    const reader = new FileReader()
+
+    reader.onload = () => setUrl(String(reader.result))
+    reader.readAsDataURL(file)
+
+    return () => {
+      reader.onload = null
+      reader.abort()
+    }
+  }, [file])
+
+  return (
+    <Card size="sm">
+      <CardHeader>
+        <CardTitle className="font-heading text-base">Imagem enviada</CardTitle>
+        <CardDescription className="break-all">
+          {file.name} · {formatBytes(file.size)}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>{url && <img src={url} alt="Imagem enviada para a análise" className="max-h-96 w-full rounded-lg border bg-muted/30 object-contain" />}</CardContent>
     </Card>
   )
 }

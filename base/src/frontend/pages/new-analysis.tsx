@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react"
 import { FileSpreadsheetIcon, ImageIcon, UploadIcon } from "lucide-react"
 import { Link, useSearchParams } from "react-router"
 
-import { RowsResult, SampleResult, TextResult } from "@/components/analysis-result"
+import { ImagePreview, RowsResult, SampleResult, TextResult } from "@/components/analysis-result"
 import { EmptyState } from "@/components/empty-state"
 import { ErrorAlert } from "@/components/error-alert"
 import { PageHeader } from "@/components/page-header"
@@ -102,6 +102,7 @@ export default function NewAnalysisPage() {
     return (
       <>
         <PageHeader title="Resultado da análise" description={selected?.name} />
+        {result.kind === "image" && image && <ImagePreview file={image} />}
         {result.rows ? <RowsResult rows={result.rows} /> : result.text ? <TextResult text={result.text} /> : <SampleResult result={result.result ?? ""} />}
         <div className="flex flex-col gap-3 sm:flex-row">
           <Button size="lg" className="sm:flex-1" onClick={again}>
