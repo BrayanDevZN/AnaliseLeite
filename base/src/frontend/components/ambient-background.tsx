@@ -24,7 +24,8 @@ const BUBBLES = [
 
 /**
  * Fundo vivo, fixo atrás de tudo: manchas de cor desfocadas que derivam bem devagar e bolhas de leite subindo.
- * Só `transform` e `opacity` animam (barato para o celular). Com "reduzir movimento" ligado, fica parado.
+ * Só `transform` e `opacity` animam. As manchas não usam `filter: blur` (caro e pesado em PC fraco): o degradê radial já deixa a borda suave.
+ * Em aparelho fraco (`data-perf="low"`, ver `lib/perf.ts`) sobram menos manchas e bolhas. Com "reduzir movimento" ligado, fica parado.
  */
 export function AmbientBackground() {
   return (
@@ -32,7 +33,7 @@ export function AmbientBackground() {
       {BLOBS.map((blob, index) => (
         <span
           key={index}
-          className="ambient-blob absolute rounded-full blur-3xl will-change-transform dark:opacity-60"
+          className="ambient-blob absolute rounded-full will-change-transform dark:opacity-60"
           style={
             {
               top: blob.top,

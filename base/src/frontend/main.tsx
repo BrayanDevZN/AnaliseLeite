@@ -9,6 +9,7 @@ import { ThemeProvider } from "@/components/theme-provider.tsx"
 import { Toaster } from "@/components/ui/toast"
 import { ApiError } from "@/lib/api"
 import { AuthProvider } from "@/lib/auth"
+import { applyPerfMode } from "@/lib/perf"
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,6 +21,8 @@ const queryClient = new QueryClient({
     },
   },
 })
+
+applyPerfMode()
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

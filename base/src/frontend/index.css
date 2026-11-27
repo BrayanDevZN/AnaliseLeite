@@ -263,6 +263,34 @@
   }
 }
 
+/* ---------- aparelho fraco (html[data-perf="low"], definido em lib/perf.ts): mantem o visual, tira so o que pesa ---------- */
+
+html[data-perf="low"] .ambient-blob:nth-child(n + 4),
+html[data-perf="low"] .ambient-bubble:nth-child(n + 9) {
+  display: none;
+}
+
+html[data-perf="low"] .ambient-blob {
+  animation-duration: 60s !important;
+}
+
+html[data-perf="low"] .ambient-bubble {
+  box-shadow: none !important;
+}
+
+html[data-perf="low"] .orbit-drop {
+  box-shadow: none !important;
+}
+
+html[data-perf="low"] .orbit-ring:nth-child(3) {
+  display: none;
+}
+
+html[data-perf="low"] * {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
 /* ---------- transicao de entrar/sair ---------- */
 
 @keyframes transition-spin {
