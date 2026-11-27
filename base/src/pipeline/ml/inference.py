@@ -1,14 +1,14 @@
 import joblib 
 from pathlib import Path 
 import pandas as pd
-from base.src.pipeline.logs.log import logger
+from base.src.pipeline.log import logger
 from sklearn.ensemble import RandomForestClassifier
 import os
 import json
 class ModelInference:
 
     #Todas as colunas de entrada que o sistema conhece
-    COLUMNS = ["data", "temperatura", "ccs", "cpp", "tanque", "estado", "cidade"]
+    COLUMNS = ["data", "temperatura", "ccs", "cpp", "estado", "cidade"]
 
     def __init__(self, model:str|None=None)-> None:
 
@@ -110,7 +110,7 @@ class ModelInference:
             schema["day"] = schema["data"].dt.dayofweek
             schema = schema.drop(columns=["data"])
 
-        categorical = [column for column in ["tanque", "estado", "cidade"] if column in schema.columns]
+        categorical = [column for column in ["estado", "cidade"] if column in schema.columns]
 
         if categorical:
             schema = pd.get_dummies(columns=categorical, dtype=int, data=schema)
@@ -119,8 +119,7 @@ class ModelInference:
 
 
     def response(self, data:str|None=None, temperatura:float|None=None, ccs:float|None=None,
-                 cpp:float|None=None, estado:str|None=None, cidade:str|None=None,
-                 tanque:str|None=None) -> str:
+                 cpp:float|None=None, estado:str|None=None, cidade:str|None=None) -> str:
 
         logger.info("Generating response...")
 
@@ -130,8 +129,7 @@ class ModelInference:
             "ccs": ccs,
             "cpp": cpp,
             "estado": estado,
-            "cidade": cidade,
-            "tanque": tanque
+            "cidade": cidade
         }
 
         used = self._used_columns()

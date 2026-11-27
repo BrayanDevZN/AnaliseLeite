@@ -13,7 +13,6 @@ async def response(data: SchemaResponse, model:str|None=None):
 
         response = instance.response(
             temperatura=data.temperature,
-            tanque=data.tanque,
             data=data.data,
             ccs=data.ccs,
             cpp=data.cpp,

@@ -1,5 +1,5 @@
 from .bronze import  Bronze
-from base.src.pipeline.logs.log import logger
+from base.src.pipeline.log import logger
 import pandas as pd
 
 class Silver(Bronze):

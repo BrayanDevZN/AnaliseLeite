@@ -10,9 +10,15 @@ class EnvNotFound(Exception):
     pass 
 
 
-API_KEY = os.getenv("ML_KEY")
+NAMES = ["ML_KEY", "BASE_URL", "API_KEY", "MODEL"]
+SETTINGS = {}
 
-if API_KEY is None:
-    raise EnvNotFound(f"Expeted env ML_KEY")
+for name in NAMES:
+
+    env = os.getenv(name)
+
+    if env is None:
+        raise EnvNotFound(f"Expeted env {name}")
 
 
+    SETTINGS[name] = env

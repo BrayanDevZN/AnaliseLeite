@@ -2,9 +2,9 @@ import argparse
 from .templates.template import TrainModel
 import os
 from pathlib import Path
-from base.src.pipeline.logs.log import logger
+from base.src.pipeline.log import logger
 import asyncio
-
+import shutil
 
 #Cria o parser com os comandos train, list e drop
 def _parser() -> argparse.ArgumentParser:
@@ -31,7 +31,7 @@ def main() -> None:
 
     BASE_DIR = Path(__file__).resolve().parent.parent / "models"
     BASE_DIR.mkdir(exist_ok=True)
-    models = [str(model).replace(".joblib", "") for model in os.listdir(BASE_DIR)]
+    models = [model for model in os.listdir(BASE_DIR)]
 
     if args.command == "train":
 
@@ -60,7 +60,13 @@ def main() -> None:
 
         name = args.name
 
-        if name not in models:
+        if name == "all":
+
+            for model in models:
+                shutil.rmtree(BASE_DIR / model)
+                logger.info(f"Droped model {model}")
+
+        elif name not in models:
             logger.warning(f"not exists model {name}")
 
         else:
