@@ -62,8 +62,8 @@ export interface Analysis {
   farm_name?: string
   tank_id: number | null
   created_at: string
-  /** "sample" (uma amostra) ou "file" (um arquivo). */
-  kind: "sample" | "file"
+  /** "sample" (uma amostra), "file" (um arquivo) ou "image" (uma imagem lida pelo agente). */
+  kind: "sample" | "file" | "image"
   /** O modelo usado; vazio é o modelo padrão. */
   model: string
   /** Quantas amostras o modelo aprovou e reprovou. Os dois zero: o resultado não foi guardado (análise antiga). */
@@ -74,6 +74,8 @@ export interface Analysis {
   result?: string
   /** Uma linha por linha do arquivo enviado: só vem na resposta de criação. */
   rows?: Record<string, unknown>[]
+  /** Análise em texto do agente de imagem, quando a imagem é sobre leite mas não tem números: só vem na resposta de criação. */
+  text?: string
 }
 
 /** Uma página da lista de análises. */

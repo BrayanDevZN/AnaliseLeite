@@ -1,5 +1,5 @@
 "Junta todos os templates"
-from base.src.pipeline.logs.log import logger
+from base.src.pipeline.log import logger
 from .balance import Balance 
 from .threshold import Threshold
 from .base import BaseTemplate

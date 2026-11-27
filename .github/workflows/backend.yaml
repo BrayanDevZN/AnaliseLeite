@@ -41,6 +41,9 @@ jobs:
         env:
             TEST_REDIS_URL: redis://localhost:6379/0
             ML_KEY: ${{ secrets.ML_KEY }}
+            BASE_URL: ${{ secrets.BASE_URL }}
+            MODEL: ${{ secrets.MODEL }}
+            API_KEY: ${{ secrets.API_KEY }}
 
         defaults:
             run:

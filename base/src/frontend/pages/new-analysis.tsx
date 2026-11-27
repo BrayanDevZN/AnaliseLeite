@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from "react"
-import { FileSpreadsheetIcon, UploadIcon } from "lucide-react"
+import { FileSpreadsheetIcon, ImageIcon, UploadIcon } from "lucide-react"
 import { Link, useSearchParams } from "react-router"
 
-import { RowsResult, SampleResult } from "@/components/analysis-result"
+import { RowsResult, SampleResult, TextResult } from "@/components/analysis-result"
 import { EmptyState } from "@/components/empty-state"
 import { ErrorAlert } from "@/components/error-alert"
 import { PageHeader } from "@/components/page-header"
@@ -40,10 +40,11 @@ export default function NewAnalysisPage() {
   const models = useModels()
   const create = useCreateAnalysis(id)
 
-  const [mode, setMode] = useState<"sample" | "file">("sample")
+  const [mode, setMode] = useState<"sample" | "file" | "image">("sample")
   const [tankId, setTankId] = useState(NONE)
   const [model, setModel] = useState(DEFAULT_MODEL)
   const [file, setFile] = useState<File | null>(null)
+  const [image, setImage] = useState<File | null>(null)
   const [result, setResult] = useState<Analysis | null>(null)
 
   const [temperature, setTemperature] = useState("")
@@ -65,7 +66,7 @@ export default function NewAnalysisPage() {
   const modelItems = [{ value: DEFAULT_MODEL, label: "Modelo padrão" }, ...(models.data?.models ?? []).map((name) => ({ value: name, label: name }))]
 
   const sampleReady = temperature && ccs && cpp && date && stateValue && cityValue.trim() && tankCode.trim()
-  const ready = id > 0 && (mode === "sample" ? Boolean(sampleReady) : file !== null)
+  const ready = id > 0 && (mode === "sample" ? Boolean(sampleReady) : mode === "file" ? file !== null : image !== null)
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -82,7 +83,9 @@ export default function NewAnalysisPage() {
     }
 
     try {
-      setResult(await create.mutateAsync(mode === "file" && file ? { ...common, file } : { ...common, sample }))
+      const input = mode === "image" && image ? { ...common, image } : mode === "file" && file ? { ...common, file } : { ...common, sample }
+
+      setResult(await create.mutateAsync(input))
     } catch {
       // o erro aparece no formulário (create.error)
     }
@@ -91,6 +94,7 @@ export default function NewAnalysisPage() {
   function again() {
     setResult(null)
     setFile(null)
+    setImage(null)
     create.reset()
   }
 
@@ -98,22 +102,24 @@ export default function NewAnalysisPage() {
     return (
       <>
         <PageHeader title="Resultado da análise" description={selected?.name} />
-        {result.rows ? <RowsResult rows={result.rows} /> : <SampleResult result={result.result ?? ""} />}
+        {result.rows ? <RowsResult rows={result.rows} /> : result.text ? <TextResult text={result.text} /> : <SampleResult result={result.result ?? ""} />}
         <div className="flex flex-col gap-3 sm:flex-row">
           <Button size="lg" className="sm:flex-1" onClick={again}>
             Fazer outra análise
           </Button>
-          <ReportButton
-            size="lg"
-            className="sm:flex-1"
-            data={() => ({
-              analysis: result,
-              farmName: selected?.name ?? `#${result.farm_id}`,
-              tank: tanks.data?.find((item) => item.id === result.tank_id),
-              contents: result.content ? [result.content] : [],
-              rows: result.rows,
+          {!result.text && (
+            <ReportButton
+              size="lg"
+              className="sm:flex-1"
+              data={() => ({
+                analysis: result,
+                farmName: selected?.name ?? `#${result.farm_id}`,
+                tank: tanks.data?.find((item) => item.id === result.tank_id),
+                contents: result.content ? [result.content] : [],
+                rows: result.rows,
             })}
           />
+          )}
           <Link to="/analises" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "sm:flex-1")}>
             Ver minhas análises
           </Link>
@@ -174,10 +180,11 @@ export default function NewAnalysisPage() {
               <FieldDescription>De qual fazenda é o leite desta análise.</FieldDescription>
             </Field>
 
-            <Tabs value={mode} onValueChange={(value) => setMode(value as "sample" | "file")}>
+            <Tabs value={mode} onValueChange={(value) => setMode(value as "sample" | "file" | "image")}>
               <TabsList className="w-full">
                 <TabsTrigger value="sample">Uma amostra</TabsTrigger>
                 <TabsTrigger value="file">Um arquivo</TabsTrigger>
+                <TabsTrigger value="image">Uma imagem</TabsTrigger>
               </TabsList>
 
               <TabsContent value="sample" className="pt-4">
@@ -251,6 +258,33 @@ export default function NewAnalysisPage() {
                     />
                   </label>
                   {fields.file ? <FieldError>{fields.file}</FieldError> : <FieldDescription>Cada linha do arquivo vira uma resposta do modelo.</FieldDescription>}
+                </Field>
+              </TabsContent>
+
+              <TabsContent value="image" className="pt-4">
+                <Field data-invalid={fields.image ? true : undefined}>
+                  <FieldLabel htmlFor="image">Imagem do laudo</FieldLabel>
+                  <label
+                    htmlFor="image"
+                    className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed p-6 text-center transition-colors hover:bg-accent/40 has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50"
+                  >
+                    {image ? <ImageIcon className="size-8 text-primary" /> : <UploadIcon className="size-8 text-muted-foreground" />}
+                    <span className="text-sm font-medium break-all">{image ? image.name : "Toque para escolher a imagem"}</span>
+                    <span className="text-xs text-muted-foreground">{image ? formatBytes(image.size) : "Foto ou print de um laudo, tabela ou anotação, até 20 MB"}</span>
+                    <Input
+                      id="image"
+                      name="image"
+                      type="file"
+                      accept="image/*"
+                      className="sr-only"
+                      onChange={(event) => setImage(event.target.files?.[0] ?? null)}
+                    />
+                  </label>
+                  {fields.image ? (
+                    <FieldError>{fields.image}</FieldError>
+                  ) : (
+                    <FieldDescription>O sistema lê CCS, CPP, temperatura, data e local na imagem. O que não aparecer nela usa o valor padrão do modelo, então o resultado é uma estimativa.</FieldDescription>
+                  )}
                 </Field>
               </TabsContent>
             </Tabs>

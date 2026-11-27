@@ -23,8 +23,7 @@ packages = [
     "base",
     "base.src",
     "base.src.pipeline",
-    "base.src.pipeline.logs",
     "base.src.pipeline.etl",
     "base.src.pipeline.ml",
-    "base.src.pipeline.ml.train",
+    "base.src.pipeline.ml.train"
 ]

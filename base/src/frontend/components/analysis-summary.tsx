@@ -1,4 +1,4 @@
-import { ChevronRightIcon, FileSpreadsheetIcon, FlaskConicalIcon } from "lucide-react"
+import { ChevronRightIcon, FileSpreadsheetIcon, FlaskConicalIcon, ImageIcon } from "lucide-react"
 import { Link } from "react-router"
 
 import { StatusBadge } from "@/components/status-badge"
@@ -32,10 +32,10 @@ export function ResultSummary({ analysis }: { analysis: Pick<Analysis, "kind" | 
   const total = analysis.approved + analysis.rejected
 
   if (total === 0) {
-    return <Badge variant="outline">Resultado não guardado</Badge>
+    return <Badge variant="outline">{analysis.kind === "image" ? "Sem números na imagem" : "Resultado não guardado"}</Badge>
   }
 
-  if (analysis.kind === "sample") {
+  if (analysis.kind === "sample" || total === 1) {
     return <StatusBadge value={analysis.approved > 0 ? "aprovado" : "reprovado"} />
   }
 
@@ -52,7 +52,7 @@ export function ResultSummary({ analysis }: { analysis: Pick<Analysis, "kind" | 
 
 /** Um cartão de análise para as listas: o que foi, de qual fazenda, quando e o resultado. Leva para o detalhe. */
 export function AnalysisCard({ analysis }: { analysis: Analysis }) {
-  const Icon = analysis.kind === "file" ? FileSpreadsheetIcon : FlaskConicalIcon
+  const Icon = analysis.kind === "file" ? FileSpreadsheetIcon : analysis.kind === "image" ? ImageIcon : FlaskConicalIcon
 
   return (
     <Link to={`/analises/${analysis.id}`} className="block rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
@@ -60,7 +60,7 @@ export function AnalysisCard({ analysis }: { analysis: Analysis }) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Icon className="size-4 text-primary" />
-            {analysis.kind === "file" ? "Arquivo" : "Amostra"}
+            {analysis.kind === "file" ? "Arquivo" : analysis.kind === "image" ? "Imagem" : "Amostra"}
             <span className="font-normal text-muted-foreground">#{analysis.id}</span>
           </CardTitle>
           <CardDescription className="flex flex-wrap items-center gap-x-2 gap-y-0.5">

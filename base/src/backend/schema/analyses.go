@@ -134,9 +134,28 @@ func (f *FileUpload) Validate() error {
 	return v.err()
 }
 
+// ValidateImage confere o tamanho e se o conteudo e mesmo uma imagem (pelo cabecalho do arquivo, nao pela extensao).
+func (f *FileUpload) ValidateImage() error {
+	var v validator
+
+	switch {
+	case len(f.Data) == 0:
+		v.add("image", "is empty")
+
+	case len(f.Data) > MaxFileSize:
+		v.add("image", "is too big")
+
+	case !strings.HasPrefix(http.DetectContentType(f.Data), "image/"):
+		v.add("image", "must be an image (jpg, png or webp)")
+	}
+
+	return v.err()
+}
+
 // CreateAnalysisRequest e o corpo de POST /farms/{id}/analyses.
-// Ou vai JSON com Sample, ou vai multipart com o arquivo (campo "file"; tank_id e model viram campos do form).
-// Exatamente um dos dois: Sample vai para contents.content e o arquivo para contents.file.
+// Ou vai JSON com Sample, ou vai multipart com o arquivo (campo "file") ou com a imagem (campo "image"); tank_id e
+// model viram campos do form. Exatamente um dos tres: Sample vai para contents.content, e o arquivo e a imagem para
+// contents.file.
 type CreateAnalysisRequest struct {
 	TankID *int64 `json:"tank_id,omitempty"`
 
@@ -145,6 +164,7 @@ type CreateAnalysisRequest struct {
 
 	Sample *Sample     `json:"sample,omitempty"`
 	File   *FileUpload `json:"-"`
+	Image  *FileUpload `json:"-"`
 }
 
 // Validate valida os campos e confere que so um entre Sample e File foi enviado.
@@ -161,18 +181,29 @@ func (r *CreateAnalysisRequest) Validate() error {
 		v.add("tank_id", "must be greater than zero")
 	}
 
-	switch {
-	case r.Sample != nil && r.File != nil:
-		v.add("body", "send either a sample or a file, not both")
+	sent := 0
 
-	case r.Sample == nil && r.File == nil:
-		v.add("body", "send a sample or a file")
+	for _, present := range []bool{r.Sample != nil, r.File != nil, r.Image != nil} {
+		if present {
+			sent++
+		}
+	}
+
+	switch {
+	case sent > 1:
+		v.add("body", "send only one of sample, file or image")
+
+	case sent == 0:
+		v.add("body", "send a sample, a file or an image")
 
 	case r.Sample != nil:
 		mergeErrors(&v, r.Sample.Validate())
 
-	default:
+	case r.File != nil:
 		mergeErrors(&v, r.File.Validate())
+
+	default:
+		mergeErrors(&v, r.Image.ValidateImage())
 	}
 
 	return v.err()
@@ -187,7 +218,7 @@ func (r *CreateAnalysisRequest) ToAnalysis(farmID int64) (*operations.Analysis, 
 	return &operations.Analysis{FarmID: farmID, TankID: r.TankID}, nil
 }
 
-// ToContent valida e monta o conteudo do banco: com amostra, so content; com arquivo, so file.
+// ToContent valida e monta o conteudo do banco: com amostra, so content; com arquivo ou imagem, so file.
 func (r *CreateAnalysisRequest) ToContent(analysisID int64) (*operations.Content, error) {
 	if err := r.Validate(); err != nil {
 		return nil, err
@@ -197,6 +228,12 @@ func (r *CreateAnalysisRequest) ToContent(analysisID int64) (*operations.Content
 
 	if r.File != nil {
 		content.File = r.File.Data
+
+		return content, nil
+	}
+
+	if r.Image != nil {
+		content.File = r.Image.Data
 
 		return content, nil
 	}
@@ -269,7 +306,7 @@ type AnalysisResponse struct {
 	TankID    *int64    `json:"tank_id"`
 	CreatedAt time.Time `json:"created_at"`
 
-	// Kind e "sample" (uma amostra) ou "file" (um arquivo). Model e o modelo usado ("" e o padrao).
+	// Kind e "sample" (uma amostra), "file" (um arquivo) ou "image" (uma imagem). Model e o modelo usado ("" e o padrao).
 	Kind  string `json:"kind"`
 	Model string `json:"model"`
 
@@ -280,10 +317,14 @@ type AnalysisResponse struct {
 
 	Content *ContentResponse `json:"content,omitempty"`
 
-	// Result ("aprovado" ou "reprovado") vem nas analises de uma amostra. Rows (uma resposta por linha do
+	// Result ("aprovado" ou "reprovado") vem nas analises de uma amostra (e nas de imagem com uma amostra). Rows (uma resposta por linha do
 	// arquivo) so vem logo ao criar: o banco guarda so as contagens.
 	Result string           `json:"result,omitempty"`
 	Rows   []map[string]any `json:"rows,omitempty"`
+
+	// Text e a analise em texto que o agente de imagem devolve quando a imagem e sobre leite mas nao tem numeros.
+	// Como Result e Rows, so vem logo ao criar.
+	Text string `json:"text,omitempty"`
 }
 
 // AnalysisFromModel converte a analise do banco para a resposta.
@@ -303,8 +344,8 @@ func AnalysisFromModel(analysis *operations.Analysis) AnalysisResponse {
 		response.Kind = operations.KindSample
 	}
 
-	// uma amostra tem um unico resultado
-	if response.Kind == operations.KindSample {
+	// uma amostra (ou uma imagem que trouxe so uma) tem um unico resultado
+	if response.Kind == operations.KindSample || (response.Kind == operations.KindImage && analysis.Approved+analysis.Rejected == 1) {
 		switch {
 		case analysis.Approved == 1 && analysis.Rejected == 0:
 			response.Result = "aprovado"
@@ -366,9 +407,9 @@ func AnalysesFromModel(analyses []operations.Analysis) []AnalysisResponse {
 	return responses
 }
 
-// AnalysisRoutes sao as rotas de analises. A de criar recebe JSON (amostra) ou multipart (arquivo).
+// AnalysisRoutes sao as rotas de analises. A de criar recebe JSON (amostra) ou multipart (arquivo ou imagem).
 var AnalysisRoutes = []Route{
-	{Method: http.MethodPost, Path: "/farms/{id}/analyses", Description: "cria uma analise e roda o modelo", Request: CreateAnalysisRequest{}, Response: AnalysisResponse{}},
+	{Method: http.MethodPost, Path: "/farms/{id}/analyses", Description: "cria uma analise e roda o modelo (JSON com amostra, ou multipart com file ou image)", Request: CreateAnalysisRequest{}, Response: AnalysisResponse{}},
 	{Method: http.MethodGet, Path: "/farms/{id}/analyses", Description: "lista as analises da fazenda", Response: []AnalysisResponse{}},
 	{Method: http.MethodGet, Path: "/analyses", Description: "lista as analises de todas as fazendas do usuario (?limit=&offset=)", Response: AnalysisListResponse{}},
 	{Method: http.MethodGet, Path: "/stats", Description: "resumo do usuario para o dashboard (?offset= e o fuso em minutos a leste de UTC)", Response: StatsResponse{}},

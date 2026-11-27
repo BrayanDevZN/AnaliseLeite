@@ -1,4 +1,4 @@
-from base.src.pipeline.logs.log import logger 
+from base.src.pipeline.log import logger 
 from .silver import Silver
 import os 
 import pandas as pd
@@ -14,8 +14,14 @@ class Train(Silver):
     #Atualiza o nome dos arquivos
     def _get_names(self) -> None:
 
-         _created = lambda path: getattr(os.stat(path), "st_birthtime",os.stat(path))
-         files = sorted(os.listdir(self.path), key=lambda f: _created(self.path / f))
+         #Data de criacao quando o sistema tem (st_birthtime); senao usa a data de modificacao.
+         #O nome desempata arquivos com a mesma data
+         def _created(file:str) -> tuple[float, str]:
+
+             stat = os.stat(self.path / file)
+             return (getattr(stat, "st_birthtime", stat.st_mtime), file)
+
+         files = sorted(os.listdir(self.path), key=_created)
         
 
          

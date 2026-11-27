@@ -1,6 +1,6 @@
 "Classe que le e salva os dataframes"
 import pandas as pd 
-from base.src.pipeline.logs.log import logger
+from base.src.pipeline.log import logger
 import os
 from pathlib import Path
 from typing import Literal

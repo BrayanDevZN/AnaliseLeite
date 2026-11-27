@@ -506,3 +506,105 @@ func TestRequestsSend(t *testing.T) {
 		}
 	})
 }
+
+func TestRequestsPredictImage(t *testing.T) {
+	ctx := context.Background()
+
+	var seenPath, seenContentType string
+	var seenBody []byte
+
+	// o falso pipeline responde conforme o ?model=: cada valor imita um caminho do agente de imagem
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		seenPath, seenContentType = r.URL.Path, r.Header.Get("Content-Type")
+		seenBody, _ = io.ReadAll(r.Body)
+
+		w.Header().Set("Content-Type", "application/json")
+
+		switch r.URL.Query().Get("model") {
+		case "rows":
+			io.WriteString(w, `[{"ccs":280,"predict":"aprovado"},{"ccs":510,"predict":"reprovado"}]`)
+
+		case "text":
+			io.WriteString(w, `"Foto de um latao de leite, sem numeros."`)
+
+		case "invalid":
+			w.WriteHeader(http.StatusConflict)
+			io.WriteString(w, `{"detail":"Invalid image"}`)
+
+		case "down":
+			w.WriteHeader(http.StatusInternalServerError)
+			io.WriteString(w, `{"detail":"boom"}`)
+
+		default:
+			io.WriteString(w, `"Reprovado"`)
+		}
+	}))
+
+	t.Cleanup(server.Close)
+
+	requests, _ := newTestRequests(t, server.URL)
+
+	t.Run("one sample", func(t *testing.T) {
+		result, err := requests.PredictImage(ctx, "laudo.jpg", strings.NewReader("JPEGDATA"), "")
+
+		if err != nil || result.Result != "reprovado" || result.Rows != nil || result.Text != "" {
+			t.Fatalf("resposta errada: %+v %v", result, err)
+		}
+
+		if seenPath != "/model/image" {
+			t.Fatalf("rota errada: %s", seenPath)
+		}
+
+		request, _ := http.NewRequest("POST", "/", bytes.NewReader(seenBody))
+
+		request.Header.Set("Content-Type", seenContentType)
+
+		if err := request.ParseMultipartForm(1 << 20); err != nil {
+			t.Fatalf("o corpo deveria ser multipart: %v", err)
+		}
+
+		file, header, err := request.FormFile("image")
+
+		if err != nil {
+			t.Fatalf("faltou o campo image: %v", err)
+		}
+
+		content, _ := io.ReadAll(file)
+
+		if header.Filename != "laudo.jpg" || string(content) != "JPEGDATA" {
+			t.Fatalf("imagem errada: %q %q", header.Filename, content)
+		}
+	})
+
+	t.Run("several samples", func(t *testing.T) {
+		result, err := requests.PredictImage(ctx, "tabela.png", strings.NewReader("x"), "rows")
+
+		if err != nil || len(result.Rows) != 2 || result.Rows[1]["predict"] != "reprovado" || result.Result != "" {
+			t.Fatalf("resposta errada: %+v %v", result, err)
+		}
+	})
+
+	t.Run("text analysis", func(t *testing.T) {
+		result, err := requests.PredictImage(ctx, "latao.jpg", strings.NewReader("x"), "text")
+
+		if err != nil || !strings.HasPrefix(result.Text, "Foto de um latao") || result.Result != "" || result.Rows != nil {
+			t.Fatalf("resposta errada: %+v %v", result, err)
+		}
+	})
+
+	t.Run("invalid image", func(t *testing.T) {
+		if _, err := requests.PredictImage(ctx, "cachorro.jpg", strings.NewReader("x"), "invalid"); !errors.Is(err, backend.ErrInvalidImage) {
+			t.Fatalf("409 deveria virar ErrInvalidImage, veio %v", err)
+		}
+	})
+
+	t.Run("pipeline failure", func(t *testing.T) {
+		_, err := requests.PredictImage(ctx, "a.jpg", strings.NewReader("x"), "down")
+
+		var requestError *backend.RequestError
+
+		if errors.Is(err, backend.ErrInvalidImage) || !errors.As(err, &requestError) || requestError.StatusCode != 500 {
+			t.Fatalf("500 deveria continuar sendo RequestError, veio %v", err)
+		}
+	})
+}

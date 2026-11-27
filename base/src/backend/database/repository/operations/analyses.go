@@ -12,6 +12,7 @@ const analysisColumns = "id, farm_id, tank_id, created_at, kind, model, approved
 const (
 	KindSample = "sample"
 	KindFile   = "file"
+	KindImage  = "image"
 )
 
 // Analysis e uma linha da tabela analyses. TankID e opcional (nil vira NULL).
@@ -21,7 +22,7 @@ type Analysis struct {
 	TankID    *int64
 	CreatedAt time.Time
 
-	// Kind e KindSample (uma amostra) ou KindFile (um arquivo); vazio vale KindSample.
+	// Kind e KindSample (uma amostra), KindFile (um arquivo) ou KindImage (uma imagem); vazio vale KindSample.
 	Kind string
 
 	// Model e o modelo usado ("" e o modelo padrao do pipeline).
