@@ -5,7 +5,13 @@ services:
         dockerfile: base/Dockerfile.pipe
       environment:
         - ML_KEY=${ML_KEY}
+        - BASE_URL=${BASE_URL}
+        - MODEL=${MODEL}
+        - API_KEY=${API_KEY}
+
       container_name: pipeline
+
+      
       
       ports:
         - "7000:7000"

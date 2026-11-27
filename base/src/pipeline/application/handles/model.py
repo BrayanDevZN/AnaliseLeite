@@ -4,7 +4,7 @@ router_model = APIRouter(prefix="/model", tags=["model"])
 import pandas as pd
 from base.src.pipeline.application.schema import SchemaResponse
 import io
-from src.pipeline.agent.response import Agent
+from base.src.pipeline.agent.response import Agent
 import base64
 @router_model.post("/")
 async def response(data: SchemaResponse, model:str|None=None):
@@ -73,8 +73,7 @@ async def response_image(image:UploadFile = File(...), model:str|None=None):
 
     instance = Agent(model=model)
     image = await image.read()
-    image = io.BytesIO(image)
-
+   
     response = await instance.response_image(image=image)
 
     if response is None:

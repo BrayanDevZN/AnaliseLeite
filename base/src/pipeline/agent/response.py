@@ -4,11 +4,11 @@ import inspect
 from functools import wraps
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
-from src.pipeline.config import SETTINGS
-from src.pipeline.log import logger
+from base.src.pipeline.config import SETTINGS
+from base.src.pipeline.log import logger
 from .prompts.file import PROMPTS
 from .schema import Image
-from src.pipeline.ml.inference import ModelInference
+from base.src.pipeline.ml.inference import ModelInference
 import pandas as pd
 class AgentError(Exception):
     pass

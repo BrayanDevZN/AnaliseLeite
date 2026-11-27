@@ -56,3 +56,17 @@ for model in models:
         raise Exception(response.text)
 
     print(response.json())
+
+
+#Agente de imagem: uma unica requisicao (fora do loop dos modelos), com a imagem valida
+IMAGE = Path(__file__).resolve().parent.parent.parent / "src/pipeline/storage/test/imagem_valida.jpg"
+
+with open(IMAGE, "rb") as f:
+    response = requests.post(url + "/model/image", files={"image": (IMAGE.name, f, "image/jpeg")}, headers=header)
+
+if response.status_code > 400:
+
+    raise Exception(response.text)
+
+print("imagem:")
+print(response.json())
