@@ -149,12 +149,13 @@ export interface AnalysisInput {
   tankId: number | null
   /** Vazio usa o modelo padrão do pipeline. */
   model: string
-  /** Ou uma amostra, ou um arquivo (csv ou parquet): nunca os dois. */
+  /** Ou uma amostra, ou um arquivo (csv ou parquet), ou uma imagem (laudo, tabela, anotação): só um deles. */
   sample?: Sample
   file?: File
+  image?: File
 }
 
-/** Cria a análise: manda o arquivo em multipart ou a amostra em JSON. A resposta traz o resultado do modelo. */
+/** Cria a análise: manda o arquivo ou a imagem em multipart, ou a amostra em JSON. A resposta traz o resultado do modelo. */
 export function useCreateAnalysis(farmId: number) {
   const client = useQueryClient()
 
@@ -162,13 +163,14 @@ export function useCreateAnalysis(farmId: number) {
     mutationFn: (input: AnalysisInput) => {
       const path = `/farms/${farmId}/analyses`
 
-      if (input.file) {
+      if (input.file || input.image) {
         const form = new FormData()
 
         if (input.tankId) form.set("tank_id", String(input.tankId))
         if (input.model) form.set("model", input.model)
 
-        form.set("file", input.file)
+        if (input.image) form.set("image", input.image)
+        else if (input.file) form.set("file", input.file)
 
         return api.upload<Analysis>(path, form)
       }

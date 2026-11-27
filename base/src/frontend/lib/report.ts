@@ -73,7 +73,7 @@ export async function downloadReport({ analysis, farmName, tank, contents, rows 
   const info: [string, string][] = [
     ["Fazenda", farmName],
     ["Data", dateTime.format(new Date(analysis.created_at))],
-    ["Tipo", analysis.kind === "file" ? "Arquivo com várias amostras" : "Uma amostra"],
+    ["Tipo", analysis.kind === "file" ? "Arquivo com várias amostras" : analysis.kind === "image" ? "Imagem" : "Uma amostra"],
     ["Modelo", analysis.model || "Padrão"],
     ...(tank ? ([["Tanque", `${tank.type} (${number.format(tank.capacity_liters)} L)`]] as [string, string][]) : []),
   ]
@@ -104,7 +104,7 @@ export async function downloadReport({ analysis, farmName, tank, contents, rows 
     doc.setTextColor(...GRAY)
     doc.text("O resultado desta análise não foi guardado (ela é anterior a essa função).", margin, y + 14)
     y += 30
-  } else if (analysis.kind === "sample") {
+  } else if (analysis.kind === "sample" || total === 1) {
     const ok = approved > 0
     doc.setFillColor(...(ok ? GREEN : RED))
     doc.roundedRect(margin, y, width - margin * 2, 40, 6, 6, "F")
@@ -166,7 +166,7 @@ export async function downloadReport({ analysis, farmName, tank, contents, rows 
   }
 
   // tabela das amostras de um arquivo
-  if (analysis.kind === "file" && rows && rows.length > 0) {
+  if ((analysis.kind === "file" || analysis.kind === "image") && rows && rows.length > 0) {
     const numbered = rows.map((row, index) => ({ row, number: index + 1 }))
     const all = numbered.length <= MAX_ROWS
     const shown = (all ? numbered : numbered.filter((item) => !isApproved(item.row))).slice(0, all ? MAX_ROWS : MAX_REJECTED)

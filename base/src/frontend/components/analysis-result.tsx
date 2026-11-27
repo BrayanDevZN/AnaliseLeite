@@ -27,6 +27,21 @@ export function SampleResult({ result }: { result: string }) {
   )
 }
 
+/** Quando a imagem é sobre leite mas não tem números, o agente devolve uma análise em texto em vez de aprovado/reprovado. */
+export function TextResult({ text }: { text: string }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="font-heading text-lg">Análise da imagem</CardTitle>
+        <CardDescription>A imagem não trazia números suficientes para o modelo aprovar ou reprovar, então esta é a leitura dela.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm whitespace-pre-line">{text}</p>
+      </CardContent>
+    </Card>
+  )
+}
+
 const LABELS: [string, string][] = [
   ["data", "Data"],
   ["temperatura", "Temperatura"],

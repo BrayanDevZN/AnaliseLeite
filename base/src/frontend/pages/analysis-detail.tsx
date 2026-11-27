@@ -114,7 +114,9 @@ export default function AnalysisDetailPage() {
         {analysis.data.approved + analysis.data.rejected === 0 ? (
           <Card size="sm">
             <CardContent className="text-sm text-muted-foreground">
-              O resultado desta análise não foi guardado: ela foi feita antes de o sistema passar a guardar os resultados.
+              {analysis.data.kind === "image"
+                ? "A imagem não trouxe números para o modelo (a análise em texto só aparece na hora em que a imagem é enviada)."
+                : "O resultado desta análise não foi guardado: ela foi feita antes de o sistema passar a guardar os resultados."}
             </CardContent>
           </Card>
         ) : analysis.data.kind === "file" ? (
@@ -131,6 +133,8 @@ export default function AnalysisDetailPage() {
               {rows.isError && <ErrorAlert error={rows.error} title="Não foi possível carregar as amostras" />}
             </>
           )
+        ) : analysis.data.kind === "image" && analysis.data.approved + analysis.data.rejected > 1 ? (
+          <ResultTotals approved={analysis.data.approved} rejected={analysis.data.rejected} />
         ) : (
           <SampleResult result={analysis.data.result ?? (analysis.data.approved > 0 ? "aprovado" : "reprovado")} />
         )}
@@ -149,13 +153,13 @@ export default function AnalysisDetailPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileSpreadsheetIcon className="size-4 text-primary" />
-                {content.kind === "file" ? "Arquivo" : "Amostra"}
+                {content.kind === "file" ? (analysis.data.kind === "image" ? "Imagem" : "Arquivo") : "Amostra"}
               </CardTitle>
               <CardDescription>{formatDateTime(content.created_at)}</CardDescription>
             </CardHeader>
             <CardContent>
               {content.kind === "file" ? (
-                <p className="text-sm">Arquivo de {formatBytes(content.file_size ?? 0)}.</p>
+                <p className="text-sm">{analysis.data.kind === "image" ? "Imagem" : "Arquivo"} de {formatBytes(content.file_size ?? 0)}.</p>
               ) : (
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
                   {LABELS.filter(([key]) => content.content?.[key] != null).map(([key, label]) => (
