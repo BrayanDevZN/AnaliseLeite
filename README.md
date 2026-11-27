@@ -26,6 +26,7 @@
     <img src="https://img.shields.io/badge/FastAPI-0.143-009688?style=for-the-badge&logo=fastapi&logoColor=cian" alt="FastAPI 0.143">
     <img src="https://img.shields.io/badge/Pandas-3.0-150458?style=for-the-badge&logo=pandas&logoColor=green" alt="Pandas 3.0">
     <img src="https://img.shields.io/badge/scikit--learn-1.9-F7931E?style=for-the-badge&logo=scikitlearn&logoColor=white" alt="scikit-learn 1.9">
+    <img src="https://img.shields.io/badge/LangChain-1.8-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white" alt="LangChain 1.8">
     <img src="https://img.shields.io/badge/Docker-ready-2496ED?style=for-the-badge&logo=docker&logoColor=blue" alt="Docker ready">
   </p>
 </div>
@@ -63,7 +64,8 @@ O sistema ajuda a responder perguntas como:
 | **Backend** | Go 1.26 (biblioteca padrão, `net/http`) | API REST com login, usuários, fazendas, tanques, análises, fotos e estatísticas. É o único cliente do pipeline |
 | **Banco de dados** | SQLite (driver `modernc.org/sqlite`, sem CGO) | Guarda usuários, fazendas, tanques, análises e conteúdos. Cria e atualiza as tabelas sozinho ao iniciar |
 | **Cache e limite de requisições** | Redis (opcional) | Cache *aside* de 60 s, contagem do *rate limit* e tokens revogados. Sem ele, tudo continua funcionando |
-| **Pipeline** | FastAPI, Pandas, PyArrow | Expõe o ETL em `GET /pipeline/` e o modelo em `GET /model/`, `POST /model/` e `POST /model/file`, protegido por chave |
+| **Pipeline** | FastAPI, Pandas, PyArrow | Expõe o ETL em `GET /pipeline/` e o modelo em `GET /model/`, `POST /model/`, `POST /model/file` e `POST /model/image`, protegido por chave |
+| **Agente de imagem** | LangChain (`langchain-openai`) e qualquer modelo de visão com API compatível com a OpenAI (Groq, LM Studio...) | Lê uma imagem (laudo, tabela, anotação), extrai CCS, CPP, temperatura, data, estado e cidade e devolve a previsão ou uma análise em texto, em `POST /model/image` |
 | **Machine learning** | scikit-learn, joblib | Treina modelos (`RandomForestClassifier`) a partir de *templates* e persiste cada um em uma pasta própria, com `config.json` |
 | **CLI `model`** | Python | Treina, lista e apaga modelos (`model train`, `model list`, `model drop`) |
 | **Docker Compose** | Docker | Sobe a `interface`, o `backend` e o `pipeline` em containers |
@@ -127,6 +129,9 @@ flowchart LR
     MW --> API[FastAPI]
     API --> LOAD[LoadData]
     API --> INFER[ModelInference]
+    API --> AGENT[Agent LangChain]
+    AGENT -->|imagem| LLM[Modelo de visão<br/>API compatível com a OpenAI]
+    AGENT --> INFER
 
     LOAD -->|raw| BRONZE[Bronze.get_raw]
     LOAD -->|cleaned| SILVER[Silver.get_silver]
@@ -160,10 +165,24 @@ flowchart LR
 
 1. O cliente envia uma coleta em JSON (`POST /model/`) ou um arquivo `.parquet`/`.csv` com várias coletas (`POST /model/file`). Opcionalmente, escolhe o modelo com `?model=<nome>`. Sem esse parâmetro, é usado o modelo mais recente.
 2. `ModelInference` carrega a pasta do modelo em `base/src/pipeline/ml/models/<nome>/` e lê o `config.json`.
-3. As **colunas de entrada são opcionais**: o `config.json` diz quais colunas aquele modelo usa. Colunas que o modelo não usa são ignoradas, e a falta de uma coluna que o modelo exige gera erro com o nome da coluna.
-4. As colunas derivadas são criadas só a partir das colunas que ficaram: `data` vira ano, mês e dia da semana, e `tanque`, `estado` e `cidade` viram colunas 0/1. As colunas que o modelo conhece e não aparecem na entrada recebem `0`.
+3. As **colunas de entrada são opcionais**: o `config.json` diz quais colunas aquele modelo usa. Colunas que o modelo não usa são ignoradas. Quando falta uma coluna que o modelo usa (ou o valor está vazio), ela é **preenchida com um valor padrão** e o log avisa o que foi preenchido: a mediana do treino para `temperatura` (3,5), `ccs` (440) e `cpp` (46), a data de hoje para `data` e nenhum estado para `estado`.
+4. As colunas derivadas são criadas só a partir das colunas que ficaram: `data` vira ano, mês e dia da semana, e `estado` vira colunas 0/1 (a sigla é normalizada: maiúsculas e sem acento). As colunas que o modelo conhece e não aparecem na entrada recebem `0`.
 5. O modelo calcula a probabilidade de reprovação. Se o `config.json` define um `threshold`, a resposta é `reprovado` quando a probabilidade for maior ou igual a ele; sem `threshold`, vale o corte padrão do modelo.
 6. A resposta é `aprovado` ou `reprovado` (uma coleta), ou o arquivo original com a coluna `predict` (várias coletas).
+
+> `ccs` e `cpp` do modelo estão em **milhares**: `480` significa 480.000 células/mL. O agente de imagem faz essa conversão sozinho; quem chama `POST /model/` ou `POST /model/file` deve mandar os valores já em milhares.
+
+### Fluxo de uma análise por imagem
+
+1. O cliente envia a imagem em `POST /model/image` (formulário `multipart`, campo `image`). Opcionalmente, escolhe o modelo de previsão com `?model=<nome>`.
+2. O `Agent` (`base/src/pipeline/agent/`) manda a imagem em base64, com o prompt `prompts/image.md`, ao modelo de visão e exige uma resposta estruturada: `valid`, `type` (`analytic` ou `text`) e `content`.
+3. O resultado cai em um de três caminhos:
+   - **Imagem sem relação com leite** (`valid` falso): a API responde `409` com `Invalid image`.
+   - **Há números** (`analytic`): `content` é uma **lista com uma entrada por amostra**, com `ccs`, `cpp`, `temperature`, `date`, `state` e `city`; o que não aparece na imagem fica `null`. Entradas sem nenhum número (`ccs`, `cpp` e `temperature` vazios) são descartadas. Depois, `ccs` e `cpp` vão para a escala do modelo: valor com 4 dígitos ou mais é número cheio e é dividido por 1000; com 1 a 3 dígitos já está em milhares e é mantido. Os campos vazios recebem o valor padrão da previsão. Uma amostra devolve `"aprovado"` ou `"reprovado"`; várias devolvem a tabela com a coluna `predict`.
+   - **Não há número nenhum, mas a imagem é sobre leite**: uma segunda chamada, com `prompts/text.md`, gera uma análise em texto (o que a imagem mostra, o que dá pra concluir e o que falta).
+4. Se a chamada ao modelo de visão falhar, o agente tenta de novo até 3 vezes, com 40 s de espera entre as tentativas.
+
+Os prompts ficam em `base/src/pipeline/agent/prompts/*.md` e são lidos pelo nome do arquivo.
 
 ## Pipeline ETL
 
@@ -344,9 +363,10 @@ AnaliseLeite/
 │   │   │   ├── lib/                  # api, auth, queries, validação, imagens, formatação
 │   │   │   └── App.tsx / main.tsx / index.css
 │   │   └── pipeline/                 # serviço Python (ETL, ML e API)
-│   │       ├── application/          # aplicação FastAPI (handles, config, midlleware, schema, main)
+│   │       ├── agent/                # agente de imagem (LangChain): response.py, schema.py e prompts/*.md
+│   │       ├── application/          # aplicação FastAPI (handles, midlleware, schema, main)
 │   │       ├── etl/                  # camadas bronze, silver, gold, train e interface de carga
-│   │       ├── logs/                 # configuração centralizada de logs
+│   │       ├── config.py / log.py    # variáveis de ambiente do pipeline e configuração centralizada de logs
 │   │       ├── ml/
 │   │       │   ├── train/            # CLI model e templates de treino
 │   │       │   ├── models/           # um diretório por modelo (joblib + config.json)
@@ -355,7 +375,7 @@ AnaliseLeite/
 │   ├── tests/
 │   │   ├── unit/                     # backend (config, hash, jwt, repositório, redis) e pipeline (camada raw)
 │   │   ├── integration/              # backend (banco, cache e pipeline) e ETL (silver, train, gold)
-│   │   └── functional/               # backend_test.go (API do backend), api.py e model.py (pipeline)
+│   │   └── functional/               # backend_test.go (API do backend), api.py e model.py (pipeline); agent.py e image.py são manuais (fora do CI)
 │   ├── .env / .env.example           # variáveis de ambiente (o .env não é versionado)
 │   ├── Dockerfile.back               # imagem do backend
 │   ├── Dockerfile.interface          # imagem da interface (build do Vite servido pelo nginx)
@@ -403,6 +423,7 @@ cp base/.env.example base/.env
 |---|---|
 | `JWT_SECRET` | Chave que assina os tokens do backend (mínimo de 32 caracteres) |
 | `ML_KEY` | Chave de API do pipeline; o backend a envia em cada chamada |
+| `BASE_URL`, `API_KEY`, `MODEL` | Modelo de visão do agente de imagem (`POST /model/image`): endereço da API compatível com a OpenAI, chave e nome do modelo |
 
 Dá para gerar uma chave boa com `openssl rand -hex 32`. As demais variáveis (porta, Redis, CORS, admin inicial, Google) estão na seção [Configuração](#configuração).
 
@@ -607,7 +628,7 @@ curl -H "Authorization: Bearer $KEY" http://localhost:7000/model/
 
 ### `POST /model/file`
 
-Recebe um arquivo `.parquet` ou `.csv` (separado por `;`) com várias coletas e devolve cada linha com todas as colunas originais mais a coluna `predict` (`aprovado` ou `reprovado`). O arquivo precisa ter as colunas que o modelo escolhido usa (para os modelos do repositório: `data`, `temperatura`, `ccs`, `cpp`, `tanque`, `estado` e `cidade`). As demais colunas são ignoradas na previsão e mantidas na resposta.
+Recebe um arquivo `.parquet` ou `.csv` (separado por `;`) com várias coletas e devolve cada linha com todas as colunas originais mais a coluna `predict` (`aprovado` ou `reprovado`). O arquivo deve ter as colunas que o modelo escolhido usa (os modelos atuais usam `data`, `temperatura`, `ccs`, `cpp` e `estado`), com `ccs` e `cpp` em milhares. Coluna ausente ou valor vazio é preenchido com um valor padrão, e o log avisa. As demais colunas são ignoradas na previsão e mantidas na resposta.
 
 | Parâmetro | Descrição |
 |---|---|
@@ -623,7 +644,7 @@ O campo do formulário deve se chamar `file`. Qualquer outra extensão é recusa
 
 ### `POST /model/`
 
-Recebe uma coleta em JSON e devolve `"aprovado"` ou `"reprovado"`. **Todos os campos são opcionais no contrato**, mas o modelo escolhido exige as colunas que usa: se faltar uma delas, a resposta é um erro que cita as colunas ausentes. Campos que o modelo não usa são ignorados.
+Recebe uma coleta em JSON e devolve `"aprovado"` ou `"reprovado"`. **Todos os campos são opcionais**: o que faltar e o modelo usar é preenchido com um valor padrão (e o log avisa). Campos que o modelo não usa são ignorados. `ccs` e `cpp` vão em milhares.
 
 | Campo | Tipo | Exemplo |
 |---|---|---|
@@ -632,17 +653,45 @@ Recebe uma coleta em JSON e devolve `"aprovado"` ou `"reprovado"`. **Todos os ca
 | `data` | texto `AAAA-MM-DD` | `"2026-03-02"` |
 | `ccs` | número | `480` |
 | `cpp` | número | `250` |
-| `cidade` | texto, sem acento | `"Betim"` |
-| `tanque` | texto | `"TC01"` |
 
 ```bash
 curl -X POST "http://localhost:7000/model/?model=anl_threshold_v2" \
   -H "Authorization: Bearer $KEY" \
   -H "Content-Type: application/json" \
-  -d '{"temperature": 4.2, "state": "MG", "data": "2026-03-02", "ccs": 480, "cpp": 250, "cidade": "Betim", "tanque": "TC01"}'
+  -d '{"temperature": 4.2, "state": "MG", "data": "2026-03-02", "ccs": 480, "cpp": 250}'
 ```
 
 Falhas na previsão respondem `501` com a mensagem do erro.
+
+### `POST /model/image`
+
+Recebe **uma imagem** (laudo, tabela, anotação, foto) e usa o agente de imagem para extrair os dados e prever. O campo do formulário deve se chamar `image`.
+
+| Parâmetro | Descrição |
+|---|---|
+| `image` (formulário) | Arquivo de imagem (JPEG). Obrigatório |
+| `model` (query) | Nome do modelo de previsão. Opcional; padrão: o mais recente |
+
+```bash
+curl -X POST "http://localhost:7000/model/image" \
+  -H "Authorization: Bearer $KEY" \
+  -F "image=@base/src/pipeline/storage/test/imagem_valida.jpg"
+```
+
+A resposta depende do que o agente achou na imagem:
+
+| Situação | Status | Corpo |
+|---|:---:|---|
+| Uma amostra com números | `200` | `"aprovado"` ou `"reprovado"` |
+| Várias amostras com números | `200` | Objeto com uma chave por coluna (`ccs`, `cpp`, `temperatura`, `data`, `estado`, `city`, `predict`), cada uma com os valores indexados por linha (`{"predict": {"0": "aprovado", "1": "reprovado"}}`) |
+| Sem número nenhum, mas a imagem é sobre leite | `200` | Texto com a análise do agente |
+| Imagem sem relação com leite | `409` | `{"detail": "Invalid image"}` |
+
+Pontos de atenção:
+
+- Cada chamada usa o modelo de visão configurado em `BASE_URL`, `API_KEY` e `MODEL` (veja [Configuração](#configuração)). Com um modelo local ou o limite de uso de um provedor gratuito, a resposta pode levar de dezenas de segundos a minutos, e uma falha temporária repete a chamada até 3 vezes, com 40 s de espera.
+- Valores que a imagem não mostra (por exemplo, a temperatura) são preenchidos com o padrão na previsão, então o resultado vale como estimativa. A resposta de várias amostras mantém as colunas com os valores lidos da imagem, e os campos que o modelo preencheu aparecem vazios (`null`).
+- Modelos de visão pequenos (3B) leem tabelas com erros ocasionais de dígito e variam de uma execução para outra. Prefira um modelo maior quando possível.
 
 ## Testes e integração contínua
 
@@ -694,10 +743,15 @@ python -m base.tests.integration.gold
 pip install requests
 python -m base.tests.functional.model   # avalia todos os modelos no arquivo de teste (roda sem a API)
 python -m base.tests.functional.api     # chama a API em execução na porta 7000
+
+# Manuais (usam o modelo de visão e não rodam no CI)
+python -m base.tests.functional.agent   # as três imagens de storage/test/ direto no agente
+python -m base.tests.functional.image   # uma requisição a POST /model/image, com a API em execução
 ```
 
 - `functional.model` imprime, para cada modelo, o percentual de acerto, o *recall*, a *precision*, o *f1* e a matriz de confusão, além de uma previsão de uma única linha.
 - `functional.api` exige a API em execução (Docker Compose). Ele chama `GET /pipeline`, `GET /model/` e, para cada modelo listado, `POST /model/file` e `POST /model/`.
+- `functional.agent` roda o agente nas imagens de `storage/test/` (`imagem_valida.jpg`, `imagem_sem_parametros.jpg` e `imagem_invalida.jpg`) e confere o tipo de resposta de cada uma. `functional.image` faz uma única chamada a `POST /model/image`. Os dois dependem do modelo de visão (cota e tempo) e variam de uma execução para outra, por isso ficam fora do CI.
 - `integration.train` monta o conjunto de treino e **renomeia os arquivos de `storage/train/`** em `train_v0`, `train_v1`, ...
 
 ### GitHub Actions
@@ -707,7 +761,7 @@ Há dois workflows, executados em *push* e *pull request*:
 | Workflow | O que roda |
 |---|---|
 | `backend.yaml` | Verifica a formatação (`gofmt`) e a análise estática (`go vet`), roda os testes unitários (com `-race`), sobe o pipeline e um Redis, roda os testes de integração, sobe o backend e roda o teste funcional |
-| `pipeline.yaml` | Usa o *environment* `develop_pl` do GitHub, que fornece a secret `ML_KEY`, sobe a API com Docker Compose, instala as dependências e roda, nesta ordem, o teste unitário, os de integração e os funcionais |
+| `pipeline.yaml` | Usa o *environment* `develop_pl` do GitHub, que fornece as secrets `ML_KEY`, `BASE_URL`, `API_KEY` e `MODEL`, sobe a API com Docker Compose, instala as dependências e roda, nesta ordem, o teste unitário, os de integração e os funcionais |
 
 ## Configuração
 
@@ -717,6 +771,9 @@ Todas as variáveis podem vir do ambiente ou do arquivo `base/.env`. O modelo co
 |---|:---:|---|---|
 | `JWT_SECRET` | sim | | Chave que assina os tokens (mínimo de 32 caracteres) |
 | `ML_KEY` | sim | | Chave de API do pipeline. O backend a envia no header `Authorization: Bearer` |
+| `BASE_URL` | sim, no pipeline | | Endereço da API compatível com a OpenAI usada pelo agente de imagem, terminando em `/v1`. Ex.: `https://api.groq.com/openai/v1` ou, no LM Studio, `http://127.0.0.1:1234/v1`. Dentro do Docker, `127.0.0.1` é o próprio container |
+| `API_KEY` | sim, no pipeline | | Chave (ou token) dessa API. No LM Studio com autenticação ligada, é o token dele |
+| `MODEL` | sim, no pipeline | | Nome do modelo de visão, como a API o conhece. Ex.: `qwen/qwen3.8-27b` (Groq) ou `qwen2.5-vl-3b-instruct` (LM Studio) |
 | `PORT` | não | `8080` | Porta do backend |
 | `MODEL_URL` | não | | Endereço do pipeline. No Compose vira `http://pipeline:7000`. Sem ele, só as rotas do modelo ficam fora do ar |
 | `DATABASE_URL` | não | `data/data.db` | Banco SQLite. No Compose vira `sqlite:///data/app.db` |
@@ -731,6 +788,8 @@ Todas as variáveis podem vir do ambiente ou do arquivo `base/.env`. O modelo co
 | `VITE_API_URL` | não | `http://localhost:8080` | Endereço do backend como o **navegador** o enxerga (gravado no *build* da interface) |
 | `INTERFACE_PORT` | não | `5173` | Porta do site no seu computador |
 | `BACKEND_URL` | não | `http://backend:8080` | Só na interface: para onde o nginx repassa `/api/...`. Use com `VITE_API_URL=/api` quando o site e o backend ficam em domínios diferentes |
+
+As três variáveis do agente (`BASE_URL`, `API_KEY`, `MODEL`) precisam estar definidas para o pipeline subir (podem ficar vazias, mas o agente só funciona com valores válidos). O `compose.yml` as repassa ao container do `pipeline`.
 
 | Serviço | Porta |
 |---|---:|
