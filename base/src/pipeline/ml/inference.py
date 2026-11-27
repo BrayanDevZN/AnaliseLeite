@@ -4,11 +4,12 @@ import pandas as pd
 from base.src.pipeline.log import logger
 from sklearn.ensemble import RandomForestClassifier
 import os
+import unicodedata
 import json
 class ModelInference:
 
     #Todas as colunas de entrada que o sistema conhece
-    COLUMNS = ["data", "temperatura", "ccs", "cpp", "estado", "cidade"]
+    COLUMNS = ["data", "temperatura", "ccs", "cpp", "estado"]
 
     def __init__(self, model:str|None=None)-> None:
 
@@ -99,6 +100,58 @@ class ModelInference:
         return used
 
 
+    #Tira acentos e espacos sobrando (Divinópolis -> Divinopolis), igual aos nomes usados no treino
+    @staticmethod
+    def _normalize_text(value):
+
+        if not isinstance(value, str):
+            return value
+
+        value = unicodedata.normalize("NFKD", value)
+        value = "".join(char for char in value if not unicodedata.combining(char))
+
+        return " ".join(value.split())
+
+    #Valores usados quando a coluna nao existe ou esta vazia: mediana do dataset de treino (ccs e cpp em mil)
+    DEFAULTS = {"temperatura": 3.5, "ccs": 440.0, "cpp": 46.0}
+
+    #Preenche o que faltou nas colunas que o modelo usa. Numericas: mediana do treino. Data: hoje.
+    #Estado vazio fica sem estado (nenhuma coluna de estado ligada). Avisa no log o que foi preenchido
+    def _fill_missing(self, schema:pd.DataFrame) -> pd.DataFrame:
+
+        filled = []
+
+        for column in self._used_columns():
+
+            if column not in schema.columns:
+                schema[column] = None
+
+            empty = schema[column].isna()
+
+            if not empty.any():
+                continue
+
+            if column in self.DEFAULTS:
+
+                schema[column] = pd.to_numeric(schema[column]).astype(float)
+                schema.loc[empty, column] = self.DEFAULTS[column]
+
+            elif column == "data":
+
+                schema[column] = pd.to_datetime(schema[column])
+                schema.loc[empty, column] = pd.Timestamp.today().normalize()
+
+            else:
+                filled.append(f"{column} (sem valor)")
+                continue
+
+            filled.append(f"{column} ({int(empty.sum())} de {len(schema)})")
+
+        if filled:
+            logger.warning(f"Missing values filled with default: {', '.join(filled)}")
+
+        return schema
+
     #Cria as colunas derivadas so das colunas que ficaram no schema
     def _build_features(self, schema:pd.DataFrame) -> pd.DataFrame:
 
@@ -110,7 +163,12 @@ class ModelInference:
             schema["day"] = schema["data"].dt.dayofweek
             schema = schema.drop(columns=["data"])
 
-        categorical = [column for column in ["estado", "cidade"] if column in schema.columns]
+        if "estado" in schema.columns:
+            schema["estado"] = schema["estado"].map(
+                lambda value: self._normalize_text(value).upper() if isinstance(value, str) else value
+            )
+
+        categorical = [column for column in ["estado"] if column in schema.columns]
 
         if categorical:
             schema = pd.get_dummies(columns=categorical, dtype=int, data=schema)
@@ -119,7 +177,7 @@ class ModelInference:
 
 
     def response(self, data:str|None=None, temperatura:float|None=None, ccs:float|None=None,
-                 cpp:float|None=None, estado:str|None=None, cidade:str|None=None) -> str:
+                 cpp:float|None=None, estado:str|None=None) -> str:
 
         logger.info("Generating response...")
 
@@ -128,18 +186,13 @@ class ModelInference:
             "temperatura": temperatura,
             "ccs": ccs,
             "cpp": cpp,
-            "estado": estado,
-            "cidade": cidade
+            "estado": estado
         }
 
         used = self._used_columns()
 
-        missing = [column for column in used if values[column] is None]
-
-        if missing:
-            raise ValueError(f"Expeted columns {', '.join(missing)}")
-
         schema = pd.DataFrame([{column: values[column] for column in used}])
+        schema = self._fill_missing(schema)
         schema = self._build_features(schema)
 
         resp = self._predict(df=schema)
@@ -164,15 +217,11 @@ class ModelInference:
 
         if droped:
 
-            logger.info(f"Droped columns {', '.join(droped)}")
-
-        missing = [column for column in used if column not in schema.columns]
-
-        if missing:
-            raise KeyError(f"Expeted columns {', '.join(missing)}")
+            logger.info(f"Droped columns {', '.join(map(str, droped))}")
 
         logger.info("Generating response for dataframe...")
 
+        schema = self._fill_missing(schema)
         schema = self._build_features(schema)
 
         result = self._predict(df=schema)

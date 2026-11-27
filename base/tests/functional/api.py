@@ -33,8 +33,7 @@ payload = {
     "state": row["estado"],
     "data": str(row["data"]),
     "ccs": float(row["ccs"]),
-    "cpp": float(row["cpp"]),
-    "cidade": row["cidade"]
+    "cpp": float(row["cpp"])
 }
 
 for model in models:

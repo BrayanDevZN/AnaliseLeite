@@ -16,7 +16,6 @@ async def response(data: SchemaResponse, model:str|None=None):
             data=data.data,
             ccs=data.ccs,
             cpp=data.cpp,
-            cidade=data.cidade,
             estado=data.state
         )
 

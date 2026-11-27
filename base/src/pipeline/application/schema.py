@@ -12,5 +12,4 @@ class SchemaResponse(BaseModel):
     data: str | None = None
     ccs: float | None = None
     cpp: float | None = None
-    cidade: str | None = None
 

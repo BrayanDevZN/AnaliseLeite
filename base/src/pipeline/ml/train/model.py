@@ -71,7 +71,7 @@ def main() -> None:
 
         else:
 
-            os.remove(BASE_DIR / f"{name}.joblib")
+            shutil.rmtree(BASE_DIR / name)
             logger.info(f"Droped model {name}")
 
 
