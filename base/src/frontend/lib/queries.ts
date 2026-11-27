@@ -181,7 +181,10 @@ export function useCreateAnalysis(farmId: number) {
         sample: input.sample,
       })
     },
-    onSuccess: () => refreshSummaries(client),
+    // sem esperar: devolver a promessa seguraria o resultado na tela até as listas e o painel terminarem de recarregar
+    onSuccess: () => {
+      void refreshSummaries(client)
+    },
   })
 }
 
