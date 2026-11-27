@@ -404,7 +404,7 @@ O backend guarda tudo em SQLite. As tabelas são criadas e atualizadas sozinhas 
 | `users` | Nome, email único, senha com hash (opcional, para quem entra só pelo Google), papel e foto de perfil |
 | `farms` | Fazendas de um usuário: nome, cidade, estado e foto |
 | `tanks` | Tanques de uma fazenda: tipo e capacidade em litros |
-| `analyses` | Uma análise por fazenda, com o tipo (`sample` ou `file`), o modelo usado e quantas amostras foram aprovadas e reprovadas |
+| `analyses` | Uma análise por fazenda, com o tipo (`sample`, `file` ou `image`), o modelo usado e quantas amostras foram aprovadas e reprovadas |
 | `contents` | O que foi enviado na análise: o JSON da amostra **ou** o arquivo (exatamente um dos dois) |
 
 ## Como executar
@@ -518,6 +518,9 @@ curl -b jar -X POST http://localhost:8080/farms -H "Content-Type: application/js
 curl -b jar -X POST http://localhost:8080/farms/1/analyses -H "Content-Type: application/json" \
   -d '{"sample":{"temperature":4.2,"ccs":480,"cpp":250,"state":"MG","cidade":"Uberaba","tanque":"TC01","data":"2026-03-02"}}'
 
+# analisar uma imagem (laudo, tabela, anotação): multipart com o campo image
+curl -b jar -X POST http://localhost:8080/farms/1/analyses -F "image=@laudo.jpg"
+
 # painel e lista de análises
 curl -b jar http://localhost:8080/stats
 curl -b jar "http://localhost:8080/analyses?limit=20&offset=0"
@@ -544,7 +547,7 @@ Regras de validação: o email precisa ser `@gmail.com` e a senha precisa ter 8 
 | `GET`, `PUT`, `DELETE` | `/farms/{id}/photo` | logado | Foto da fazenda |
 | `POST`, `GET` | `/farms/{id}/tanks` | logado | Cria e lista os tanques da fazenda |
 | `GET`, `PATCH`, `DELETE` | `/tanks/{id}` | logado | Busca, atualiza e apaga um tanque |
-| `POST`, `GET` | `/farms/{id}/analyses` | logado | Cria uma análise (roda o modelo) e lista as da fazenda |
+| `POST`, `GET` | `/farms/{id}/analyses` | logado | Cria uma análise (roda o modelo) e lista as da fazenda. Cria com JSON (`sample`) ou `multipart` com `file` (csv/parquet) ou `image` (laudo, tabela, anotação; lida pelo agente de imagem do pipeline). Imagem sem relação com leite dá `400`; a resposta de imagem traz `result`, `rows` ou `text`, conforme o que o agente achou |
 | `GET` | `/analyses` | logado | Lista as análises de todas as fazendas do usuário (`?limit=&offset=`) |
 | `GET` | `/stats` | logado | Resumo para o painel de início (`?offset=` é o fuso em minutos a leste de UTC) |
 | `GET`, `DELETE` | `/analyses/{id}` | logado | Busca e apaga uma análise |

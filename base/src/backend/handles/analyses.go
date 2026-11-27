@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/BrayanDevZN/AnaliseLeite/base/src/backend"
 	"github.com/BrayanDevZN/AnaliseLeite/base/src/backend/database/repository/operations"
 	"github.com/BrayanDevZN/AnaliseLeite/base/src/backend/schema"
 )
@@ -41,7 +42,7 @@ func (h *Handles) ownedAnalysis(r *http.Request, p *Principal) (*operations.Anal
 }
 
 // readAnalysisRequest le o corpo de POST /farms/{id}/analyses: JSON (amostra) ou multipart (arquivo).
-// No multipart o arquivo vem no campo "file", e tank_id e model sao campos do form.
+// No multipart o arquivo vem no campo "file" (ou a imagem no campo "image"), e tank_id e model sao campos do form.
 func readAnalysisRequest(w http.ResponseWriter, r *http.Request) (*schema.CreateAnalysisRequest, error) {
 	var request schema.CreateAnalysisRequest
 
@@ -79,10 +80,25 @@ func readAnalysisRequest(w http.ResponseWriter, r *http.Request) (*schema.Create
 		return nil, bodyError("sample", "is not accepted in an upload, send only the file")
 	}
 
-	file, header, err := r.FormFile("file")
+	var err error
+
+	if request.File, err = readUpload(r, "file"); err != nil {
+		return nil, err
+	}
+
+	if request.Image, err = readUpload(r, "image"); err != nil {
+		return nil, err
+	}
+
+	return &request, nil
+}
+
+// readUpload le o arquivo do campo do form; devolve nil (sem erro) se o campo nao foi enviado.
+func readUpload(r *http.Request, field string) (*schema.FileUpload, error) {
+	file, header, err := r.FormFile(field)
 
 	if err != nil {
-		return &request, nil
+		return nil, nil
 	}
 
 	defer file.Close()
@@ -90,12 +106,10 @@ func readAnalysisRequest(w http.ResponseWriter, r *http.Request) (*schema.Create
 	data, err := io.ReadAll(io.LimitReader(file, schema.MaxFileSize+1))
 
 	if err != nil {
-		return nil, bodyError("file", "could not be read")
+		return nil, bodyError(field, "could not be read")
 	}
 
-	request.File = &schema.FileUpload{Filename: header.Filename, Data: data}
-
-	return &request, nil
+	return &schema.FileUpload{Filename: header.Filename, Data: data}, nil
 }
 
 // createAnalysis: POST /farms/{id}/analyses.
@@ -150,10 +164,27 @@ func (h *Handles) createAnalysis(w http.ResponseWriter, r *http.Request, p *Prin
 
 	response := schema.AnalysisResponse{}
 
-	if request.File != nil {
+	switch {
+	case request.Image != nil:
+		var image *backend.ImageResult
+
+		image, err = h.requests.PredictImage(r.Context(), request.Image.Filename, bytes.NewReader(request.Image.Data), request.Model)
+
+		if err == nil {
+			response.Result, response.Rows, response.Text = image.Result, image.Rows, image.Text
+		}
+
+	case request.File != nil:
 		response.Rows, err = h.requests.PredictFile(r.Context(), request.File.Filename, bytes.NewReader(request.File.Data), request.Model)
-	} else {
+
+	default:
 		response.Result, err = h.requests.Predict(r.Context(), request.Sample.ToModelInput(), request.Model)
+	}
+
+	if errors.Is(err, backend.ErrInvalidImage) {
+		h.fail(w, bodyError("image", "is not about milk quality or could not be read"))
+
+		return
 	}
 
 	if err != nil {
@@ -165,10 +196,24 @@ func (h *Handles) createAnalysis(w http.ResponseWriter, r *http.Request, p *Prin
 	// guarda o resultado do modelo junto com a analise (para a lista e o dashboard)
 	analysis.Model = request.Model
 
-	if request.File != nil {
+	switch {
+	case request.Image != nil:
+		analysis.Kind = operations.KindImage
+		analysis.Approved, analysis.Rejected = countPredictions(response.Rows)
+
+		switch strings.ToLower(response.Result) {
+		case "aprovado":
+			analysis.Approved = 1
+
+		case "reprovado":
+			analysis.Rejected = 1
+		}
+
+	case request.File != nil:
 		analysis.Kind = operations.KindFile
 		analysis.Approved, analysis.Rejected = countPredictions(response.Rows)
-	} else {
+
+	default:
 		analysis.Kind = operations.KindSample
 
 		switch strings.ToLower(response.Result) {
@@ -209,6 +254,7 @@ func (h *Handles) createAnalysis(w http.ResponseWriter, r *http.Request, p *Prin
 	created.Content = &contentResponse
 	created.Result = response.Result
 	created.Rows = response.Rows
+	created.Text = response.Text
 
 	writeJSON(w, http.StatusCreated, created)
 }

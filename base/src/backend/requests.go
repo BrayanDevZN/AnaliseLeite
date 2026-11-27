@@ -24,6 +24,10 @@ const (
 	// defaultRequestTimeout e o tempo maximo de cada chamada ao pipeline.
 	defaultRequestTimeout = 60 * time.Second
 
+	// imageRequestTimeout e o tempo maximo da chamada de imagem: o agente do pipeline le a imagem com um modelo
+	// de visao e, se falhar, tenta de novo ate 3 vezes, entao demora bem mais que as outras rotas.
+	imageRequestTimeout = 110 * time.Second
+
 	// maxResponseSize e o maior corpo de resposta que e lido (em bytes).
 	maxResponseSize = 64 << 20
 )
@@ -39,6 +43,9 @@ var (
 	ErrInvalidModelURL = errors.New("invalid model url")
 	ErrInvalidLayer    = errors.New("invalid layer, expected processed, cleaned or raw")
 	ErrInvalidFile     = errors.New("expected a csv or parquet file")
+
+	// ErrInvalidImage quando o agente do pipeline diz que a imagem nao serve (nao tem relacao com leite).
+	ErrInvalidImage = errors.New("the image is not related to milk quality")
 
 	ErrInvalidMethod     = errors.New("invalid request method")
 	ErrInvalidRequestURL = errors.New("invalid request url")
@@ -64,6 +71,15 @@ type ModelInput struct {
 	CPP         *float64 `json:"cpp,omitempty"`
 	City        *string  `json:"cidade,omitempty"`
 	Tank        *string  `json:"tanque,omitempty"`
+}
+
+// ImageResult e a resposta do agente de imagem do pipeline (POST /model/image). So um dos campos vem preenchido:
+// Result para uma amostra lida ("aprovado" ou "reprovado"), Rows para varias amostras (uma linha por amostra, com
+// a coluna "predict") e Text quando a imagem nao tem numeros e o agente devolveu uma analise em texto.
+type ImageResult struct {
+	Result string
+	Rows   []map[string]any
+	Text   string
 }
 
 // RequestsOption muda o comportamento de NewRequests.
@@ -259,6 +275,83 @@ func (r *Requests) PredictFile(ctx context.Context, filename string, file io.Rea
 	}
 
 	return rows, nil
+}
+
+// PredictImage chama POST /model/image: o agente do pipeline le a imagem (laudo, tabela, anotacao), extrai os dados
+// e prever. A resposta depende do que ele achou (veja ImageResult). Se a imagem nao tem relacao com leite, devolve
+// ErrInvalidImage. Com model vazio, usa o modelo padrao.
+func (r *Requests) PredictImage(ctx context.Context, filename string, image io.Reader, model string) (result *ImageResult, err error) {
+	defer r.begin("predict an image")(&err)
+
+	var body bytes.Buffer
+
+	writer := multipart.NewWriter(&body)
+
+	part, err := writer.CreateFormFile("image", filename)
+
+	if err != nil {
+		return nil, fmt.Errorf("build upload: %w", err)
+	}
+
+	if _, err := io.Copy(part, image); err != nil {
+		return nil, fmt.Errorf("read image: %w", err)
+	}
+
+	if err := writer.Close(); err != nil {
+		return nil, fmt.Errorf("build upload: %w", err)
+	}
+
+	// o agente demora mais que as outras rotas: usa uma copia do cliente com o prazo maior (so se o atual for menor)
+	slow := *r
+
+	if r.client.Timeout > 0 && r.client.Timeout < imageRequestTimeout {
+		slow.client = &http.Client{Transport: r.client.Transport, CheckRedirect: r.client.CheckRedirect, Jar: r.client.Jar, Timeout: imageRequestTimeout}
+	}
+
+	var raw json.RawMessage
+
+	if err := slow.do(ctx, http.MethodPost, "/model/image", modelQuery(model), writer.FormDataContentType(), &body, &raw); err != nil {
+		var requestError *RequestError
+
+		// o pipeline responde 409 quando o agente considera a imagem invalida
+		if errors.As(err, &requestError) && requestError.StatusCode == http.StatusConflict {
+			return nil, ErrInvalidImage
+		}
+
+		return nil, err
+	}
+
+	return decodeImageResult(raw)
+}
+
+// decodeImageResult separa as tres formas da resposta do agente: texto (uma amostra ou analise) ou lista de linhas.
+func decodeImageResult(raw json.RawMessage) (*ImageResult, error) {
+	trimmed := bytes.TrimSpace(raw)
+
+	if len(trimmed) > 0 && trimmed[0] == '[' {
+		var rows []map[string]any
+
+		if err := json.Unmarshal(trimmed, &rows); err != nil {
+			return nil, fmt.Errorf("decode model service response: %w", err)
+		}
+
+		return &ImageResult{Rows: rows}, nil
+	}
+
+	var text string
+
+	if err := json.Unmarshal(trimmed, &text); err != nil {
+		return nil, fmt.Errorf("decode model service response: %w", err)
+	}
+
+	text = strings.TrimSpace(text)
+
+	switch strings.ToLower(text) {
+	case "aprovado", "reprovado":
+		return &ImageResult{Result: strings.ToLower(text)}, nil
+	}
+
+	return &ImageResult{Text: text}, nil
 }
 
 // Models chama GET /model/ e devolve os nomes dos modelos disponiveis.
